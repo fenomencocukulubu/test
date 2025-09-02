@@ -17,7 +17,8 @@
   h1{font-size:clamp(20px,3vw,28px);font-weight:800}
   h2{font-size:clamp(18px,2.4vw,22px);font-weight:700}
   h3{font-size:clamp(16px,2vw,18px);font-weight:700}
-  .app{max-width:1200px;margin:auto;padding:18px}
+  /* Uygulama genişliği büyütüldü */
+  .app{max-width:1680px;margin:auto;padding:18px}
   .top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
   .brand{display:flex;align-items:center;gap:10px}
   .brand .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--pri),#8b5cf6)}
@@ -42,10 +43,10 @@
   tr{border-radius:10px}
   .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);font-weight:600;color:var(--pri-ink)}
   .pill.bad{background:#fee2e2;color:#991b1b}
-  .card{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);border:1px solid #e5e7eb}
-  .kgrid{display:grid;gap:4px}
-  .kgrid[data-cols]{grid-template-columns:140px repeat(var(--cols), minmax(68px,1fr));}
-  .kcell{border:1px dashed var(--grid);min-height:44px;padding:4px;border-radius:8px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;white-space:pre-line}
+  .card{background:#fff;border-radius:16px;padding:14px;box-shadow:0 8px 20px rgba(15,23,42,.06);border:1px solid #e5e7eb;overflow:hidden}
+  .kgrid{display:grid;gap:6px}
+  .kgrid[data-cols]{grid-template-columns:140px repeat(var(--cols), minmax(72px,1fr));}
+  .kcell{border:1px dashed var(--grid);min-height:60px;padding:6px;border-radius:10px;background:#fafafa;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;white-space:pre-line}
   .kcell.busy{background:#eef2ff;border-color:#c7d2fe}
   .kcell.bad{background:#fee2e2;border-color:#fecaca}
   .kcell.ok{background:#dcfce7;border-color:#bbf7d0}
@@ -53,7 +54,8 @@
   .legend span{padding:6px 10px;border-radius:20px;background:#f1f5f9}
   .chips{display:flex;gap:8px;flex-wrap:wrap}
   .wide{width:100%}
-  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  /* Geniş kart dizilimi */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:14px}
   .flex{display:flex;gap:10px;align-items:center}
   .right{margin-left:auto}
   .muted{color:var(--muted)}
@@ -62,8 +64,8 @@
   .tag{display:inline-block;background:#f1f5f9;padding:2px 8px;border-radius:999px;margin-left:6px;color:#334155}
   .nowrap{white-space:nowrap}
 
-  /* Eşit boy müsaitlik kartları */
-  .avGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:12px;align-items:stretch}
+  /* 1. resim – Öğretmen/Grup müsaitlik kartları genişletildi */
+  .avGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(520px,1fr));gap:14px;align-items:stretch}
   .avGrid .card{height:100%;display:flex;flex-direction:column}
   .avGrid .kgrid{flex:1}
 
@@ -92,6 +94,12 @@
     .print-table thead th{background:#f3f4f6}
     .tight th,.tight td{padding:4px 5px;font-size:10.2px}
     .avoid-break{page-break-inside:avoid;break-inside:avoid}
+    .students-2col{columns:2;column-gap:12px}
+    .students-2col ul{margin:0;padding-left:0;list-style:none}
+    .students-2col li{break-inside:avoid;padding:2px 0;border-bottom:1px dotted #94a3b8}
+    .att-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px}
+    .att-table th,.att-table td{border:1px solid #0f172a;padding:3px 4px;text-align:center}
+    .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
 </style>
 </head>
@@ -118,7 +126,7 @@
     <button class="tab" data-panel="step3" role="tab">3. Müsaitlikler</button>
     <button class="tab" data-panel="step4" role="tab">4. Grup Talepleri</button>
     <button class="tab" data-panel="step5" role="tab">5. Atama Paneli</button>
-    <button class="tab" data-panel="step6" role="tab">6. Yazdır</button>
+    <button class="tab" data-panel="step6" role="tab">Yazdır</button>
   </div>
 
   <!-- STEP 1 -->
@@ -307,7 +315,7 @@
   <!-- STEP 6 -->
   <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
     <div class="section-title">
-      <h2>6) Yazdır / Rapor</h2>
+      <h2>Yazdır / Rapor</h2>
       <div class="chips no-print">
         <span class="pill">A4 çıktı, sayfa başı öğretmen/grup</span>
         <span class="pill">Sadece atama varsa</span>
@@ -353,12 +361,36 @@ const download = (name, obj) => {
   a.download = name; a.click();
 };
 const openFile = (inputEl, cb) => { inputEl.onchange = e=>{
-  const f = e.target.files[0]; if(!f) return;
-  const r = new FileReader();
-  r.onload = () => cb(JSON.parse(r.result));
-  r.readAsText(f); inputEl.value='';
+  try{
+    const f = e.target.files[0]; if(!f) return;
+    const r = new FileReader();
+    r.onload = () => { try{ cb(JSON.parse(r.result)); }catch(err){ alert('Geçersiz JSON: '+err.message); } };
+    r.readAsText(f); inputEl.value='';
+  }catch(err){ alert('Dosya okunamadı: '+err.message); }
 }; inputEl.click(); };
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+/* Grup sıralama:  G1-7A, G2-7A, G3-7A, ... G1-7B ... */
+function parseGroupName(name){
+  const s=String(name||'').trim().toUpperCase();
+  // G<number>-<grade><section> -> G1-7A
+  let m=s.match(/^G(\d+)-(\d+)\s*([A-ZÇĞİÖŞÜ])$/i);
+  if(m) return {grp:+m[1], grade:+m[2], sec:m[3]};
+  // Fallback: G<number>-<label>
+  m=s.match(/^G(\d+)-(.+)$/i);
+  if(m) return {grp:+m[1], grade:0, sec:m[2]};
+  return null;
+}
+function groupComparator(a,b){
+  const A=parseGroupName(a.name||a.id||a), B=parseGroupName(b.name||b.id||b);
+  if(A && B){
+    const keyA = String(A.grade).padStart(2,'0') + ' ' + String(A.sec);
+    const keyB = String(B.grade).padStart(2,'0') + ' ' + String(B.sec);
+    if(keyA!==keyB) return keyA.localeCompare(keyB,'tr');
+    return (A.grp||0)-(B.grp||0);
+  }
+  return (a.name||a).localeCompare(b.name||b,'tr');
+}
 
 /* ===== Üst Sekmeler ===== */
 function showTopTab(panelId){
@@ -382,7 +414,7 @@ async function gvizFetch(sheetId, sheetName, selectRange){
   const res = await fetch(url, {mode:'cors'}); const txt = await res.text();
   const json = JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?$/)[1]);
   const cols = json.table.cols.map(c=>c.label);
-  const rows = (json.table.rows||[]).map(r=>(r.c||[]).map(c=>c?c.v:''));
+  const rows = (json.table.rows||[]).map(r=>(r.c||[]).map(c=>c?c.v:'')); // why: boş hücreler için
   return {columns:cols, rows};
 }
 function renderTeachers(){
@@ -411,7 +443,7 @@ function buildGroupsFromStudents(){
 }
 function renderGroupSummary(){
   const wrap = $("#groupSummary"); wrap.innerHTML='';
-  Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+  Object.values(state.groups).sort(groupComparator).forEach(g=>{
     const el = document.createElement('span'); el.className='pill';
     el.textContent = `${g.name} • ${g.students.length} öğrenci`;
     wrap.appendChild(el);
@@ -594,7 +626,7 @@ function renderAvailGrids(){
     state.teachers.forEach(t=>{
       const card = document.createElement('div'); card.className='card';
       const head = document.createElement('div'); head.className='flex';
-      head.innerHTML = `<b>${t.name}</b><span class="tag">${t.branch}</span>`;
+      head.innerHTML = `<b>👤 ${t.name}</b><span class="tag">${t.branch}</span>`;
       const right = document.createElement('div'); right.className='right flex';
       const b1=document.createElement('button'); b1.className='btn xs ghost'; b1.textContent='Tümünü Uygun';
       const b2=document.createElement('button'); b2.className='btn xs ghost'; b2.textContent='Tümünü Değil';
@@ -634,7 +666,7 @@ function renderAvailGrids(){
   if(groups.length===0){
     gWrap.innerHTML = '<div class="muted">Grup verisi yok. Öğrencilerden gruplar türetilir.</div>';
   }else{
-    groups.forEach(g=>{
+    groups.sort(groupComparator).forEach(g=>{
       const card = document.createElement('div'); card.className='card';
       const head = document.createElement('div'); head.className='flex';
       head.innerHTML = `<b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span>`;
@@ -688,7 +720,7 @@ function ensureRequests(){
 function refreshReqFilterOptions(){
   const sel = $("#reqGroupSelect"); sel.innerHTML='';
   const opt0=document.createElement('option'); opt0.value=''; opt0.textContent='(Grup seçin)'; sel.appendChild(opt0);
-  Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+  Object.values(state.groups).sort(groupComparator).forEach(g=>{
     const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
   });
 }
@@ -711,6 +743,7 @@ function renderRequests(){
   const total = totalRequestForGroup(g.id);
   const capacity = state.program.days.length * state.program.slots;
   const chip = document.createElement('span'); chip.className='pill' + (total>capacity?' bad':'');
+
   chip.textContent = `Toplam: ${total} • Kapasite: ${capacity}`;
 
   const head = document.createElement('div'); head.className='flex';
@@ -738,7 +771,12 @@ function renderRequests(){
   wrap.appendChild(card);
 }
 const exportReq = ()=>download('grup-talepleri.json', state.requests);
-const importReq = obj=>{ if(!obj || typeof obj!=='object') return alert('Geçersiz talepler JSON.'); state.requests = obj; renderRequests(); };
+const importReq = obj=>{
+  if(!obj || typeof obj!=='object') return alert('Geçersiz talepler JSON.');
+  state.requests = obj;
+  refreshReqFilterOptions();
+  renderRequests();
+};
 
 /* ===== 5) Atama ===== */
 function findTeacherOptions(branch){ return state.teachers.filter(t=>t.branch===branch); }
@@ -755,7 +793,7 @@ function renderAssignCards(){
   const days = state.program.days, S=state.program.slots;
 
   const groups = Object.values(state.groups).slice()
-    .sort((a,b)=> (hasAssignmentsForGroup(b.id)?1:0)-(hasAssignmentsForGroup(a.id)?1:0) || a.name.localeCompare(b.name));
+    .sort((a,b)=> (hasAssignmentsForGroup(b.id)?1:0)-(hasAssignmentsForGroup(a.id)?1:0) || groupComparator(a,b));
 
   groups.forEach(g=>{
     const card = document.createElement('div'); card.className='card';
@@ -774,7 +812,10 @@ function renderAssignCards(){
       for(let s=0; s<S; s++){
         const cell = document.createElement('div'); cell.className='kcell'; cell.dataset.d=d; cell.dataset.s=s;
         const cur = state.assignments.find(a=>a.group===g.id && a.day===d && a.slot===s);
-        if(cur){ cell.classList.add('busy'); cell.innerHTML = `<div>${cur.branch}</div><div class="mini2">${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div>`; }
+        if(cur){
+          cell.classList.add('busy');
+          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div></div>`;
+        }
         cell.onclick = ()=>{ openAssignDialog(g.id, d, s); };
         row.appendChild(cell);
       }
@@ -852,7 +893,12 @@ function autoAssign(){
   renderAssignCards();
 }
 const exportAssgn = ()=>download('atamalar.json', state.assignments);
-const importAssgn = obj=>{ if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.'); state.assignments = obj; renderAssignCards(); };
+const importAssgn = obj=>{
+  if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.');
+  state.assignments = obj;
+  reconcileAllToProgram(getAssignPolicy());
+  renderAssignCards();
+};
 
 /* ===== 6) Yazdır ===== */
 function hasAnyAssignments(){ return state.assignments && state.assignments.length>0; }
@@ -861,7 +907,7 @@ function refreshPrintFilters(){
   const sel = $("#printFilter"); sel.innerHTML='';
   if(mode==='group'){
     const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Gruplar)'; sel.appendChild(opt0);
-    Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+    Object.values(state.groups).sort(groupComparator).forEach(g=>{
       const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
     });
   }else{
@@ -884,16 +930,14 @@ function renderPrintPreview(){
   $("#btnPrint").disabled = false;
 
   const hdr = document.createElement('div'); hdr.className='print-header';
-  hdr.innerHTML = '<h2>Fenomen Çocuk Kulübü — Grup Ders Planı</h2>'; div.appendChild(hdr);
-  const sub = document.createElement('div'); sub.className='print-sub';
-  sub.textContent = (mode==='group' ? `Görünüm: Gruplar` : `Görünüm: Öğretmenler`);
-  div.appendChild(sub);
+  hdr.innerHTML = `<h2>Fenomen Çocuk Kulübü — ${mode==='group'?'Grup':'Öğretmen'} Ders Planı</h2>`;
+  div.appendChild(hdr);
 
   if(mode==='group'){
     const groups = (filter ? [state.groups[filter]] : Object.values(state.groups))
       .filter(Boolean)
       .filter(g=>state.assignments.some(a=>a.group===g.id))
-      .sort((a,b)=>a.name.localeCompare(b.name));
+      .sort(groupComparator);
 
     groups.forEach(g=>{
       const aForG = state.assignments.filter(a=>a.group===g.id);
@@ -903,26 +947,34 @@ function renderPrintPreview(){
       const page=document.createElement('div'); page.className='print-page';
       const wr = document.createElement('div'); wr.className='print-wrapper avoid-break';
 
-      // Başlık
+      // Öğrenciler – iki sütun 👤
+      const students = state.students.filter(st=>st.group===g.id).map(s=>s.name);
       const title = document.createElement('div'); title.className='print-sub';
-      const students = state.students.filter(st=>st.group===g.id).map(s=>s.name).join(', ');
-      title.innerHTML = `<b>${g.name}</b> • Öğrenciler: ${students||'—'}`;
+      title.innerHTML = `<b>${g.name}</b> • Öğrenciler:`;
       wr.appendChild(title);
 
-      // Tablo
+      const stCol = document.createElement('div'); stCol.className='students-2col';
+      const ul = document.createElement('ul');
+      students.forEach(n=>{
+        const li=document.createElement('li'); li.innerHTML=`👤 ${n}`; ul.appendChild(li);
+      });
+      stCol.appendChild(ul); wr.appendChild(stCol);
+
+      // Tablo – ortalı öğretmen isimleri
       const t = document.createElement('table'); t.className='print-table tight';
       const thead = `<tr><th>Gün / Saat</th>${Array.from({length:S},(_,i)=>`<th>${labels[i]||''}</th>`).join('')}</tr>`;
       let body='';
-      daysWith.forEach(d=>{
-        let row=`<tr><td><b>${days[d]}</b></td>`;
+      days.forEach((d,di)=>{
+        let row=`<tr><td><b>${days[di]}</b></td>`;
         for(let s=0; s<S; s++){
-          const a = aForG.find(x=>x.day===d && x.slot===s);
-          const txt = a ? `<b>${a.branch}</b><br/>${state.teachers.find(t=>t.id===a.teacherId)?.name||''}` : '';
+          const a = aForG.find(x=>x.day===di && x.slot===s);
+          const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : '';
           row += `<td>${txt}</td>`;
         }
         row+='</tr>'; body+=row;
       });
       t.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`; wr.appendChild(t);
+
       page.appendChild(wr); div.appendChild(page);
     });
 
@@ -939,19 +991,40 @@ function renderPrintPreview(){
       const page=document.createElement('div'); page.className='print-page';
       const wr = document.createElement('div'); wr.className='print-wrapper avoid-break';
 
+      // Üst tablo — öğretmene göre, ortalı
       const tTbl = document.createElement('table'); tTbl.className='print-table tight';
-      const thead = `<tr><th colspan="${S+1}">${t.name} — ${t.branch}</th></tr>
+      const thead = `<tr><th colspan="${S+1}" style="text-align:center">${t.name} — ${t.branch}</th></tr>
                      <tr><th>Gün / Saat</th>${Array.from({length:S},(_,i)=>`<th>${labels[i]||''}</th>`).join('')}</tr>`;
       let body='';
       daysWith.forEach(d=>{
         let row=`<tr><td><b>${days[d]}</b></td>`;
         for(let s=0; s<S; s++){
           const a = aForT.find(x=>x.day===d && x.slot===s);
-          row += a ? `<td><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
+          row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
         }
         row+='</tr>'; body+=row;
       });
       tTbl.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`; wr.appendChild(tTbl);
+
+      // Yoklama blokları — her grup için küçük tablo
+      const groupsForT = Array.from(new Set(aForT.map(a=>a.group))).map(gid=>state.groups[gid]).filter(Boolean).sort(groupComparator);
+      groupsForT.forEach(g=>{
+        const blockTitle = document.createElement('div'); blockTitle.className='print-sub';
+        blockTitle.innerHTML = `<b>${g.name}</b> • Öğrenci Yoklama`;
+        wr.appendChild(blockTitle);
+
+        const att = document.createElement('table'); att.className='att-table';
+        att.innerHTML = `<thead>
+            <tr><th>👤 Öğrenci</th><th>Geldi</th><th>Gelmedi</th><th>Geç Geldi</th><th>İzinli</th></tr>
+          </thead><tbody></tbody>`;
+        const tbody = att.querySelector('tbody');
+        state.students.filter(s=>s.group===g.id).forEach(st=>{
+          const tr=document.createElement('tr');
+          tr.innerHTML = `<td>${st.name}</td><td>□</td><td>□</td><td>□</td><td>□</td>`;
+          tbody.appendChild(tr);
+        });
+        wr.appendChild(att);
+      });
 
       page.appendChild(wr); div.appendChild(page);
     });
@@ -974,6 +1047,8 @@ $("#btnProgImport").onclick = ()=>openFile($("#fileProgImport"), obj=>{
   state.program = obj; if(!Array.isArray(state.program.slotLabels)) state.program.slotLabels=[];
   $("#daysInput").value = obj.days.join(','); $("#slotsInput").value = obj.slots;
   buildProgramGrid(true); renderSlotLabels();
+  reconcileAllToProgram(getAssignPolicy());
+  renderAvailGrids(); renderAssignCards(); refreshPrintFilters();
 });
 
 $("#btnAvailExport").onclick = ()=>download('musaitlikler.json', state.availability);
@@ -1004,25 +1079,35 @@ $("#btnAssgnExport").onclick = exportAssgn;
 $("#btnAssgnImport").onclick = ()=>openFile($("#fileAssgnImport"), importAssgn);
 $("#btnAssgnClear").onclick = ()=>{ state.assignments=[]; renderAssignCards(); };
 
-$("#printMode").onchange = ()=> refreshPrintFilters();
+$("#printMode").onchange = ()=> { refreshPrintFilters(); renderPrintPreview(); };
 $("#btnRenderPrint").onclick = renderPrintPreview;
 
-$("#btnSaveAll").onclick = ()=>{ localStorage.setItem('fenomen_tabs_plus2', JSON.stringify(state)); alert('Yerel olarak kaydedildi.'); };
+$("#btnSaveAll").onclick = ()=>{
+  try{
+    localStorage.setItem('fenomen_tabs_plus2', JSON.stringify(state));
+    alert('Yerel olarak kaydedildi.');
+  }catch(err){ alert('Kaydetme hatası: '+err.message); }
+};
 $("#btnLoadAll").onclick = ()=>{
-  const raw = localStorage.getItem('fenomen_tabs_plus2')
-           || localStorage.getItem('fenomen_tabs_plus')
-           || localStorage.getItem('fenomen_tabs_fix')
-           || localStorage.getItem('fenomen_v2_tabs')
-           || localStorage.getItem('fenomen_v2')
-           || localStorage.getItem('fenomen_v1');
-  if(!raw) return alert('Kayıt bulunamadı.');
-  Object.assign(state, JSON.parse(raw));
-  renderTeachers(); renderStudents(); renderGroupSummary();
-  $("#daysInput").value = state.program.days.join(','); $("#slotsInput").value = state.program.slots;
-  buildProgramGrid(true); renderSlotLabels();
-  reconcileAllToProgram(getAssignPolicy());
-  showTopTab('step1');
-  alert('Yüklendi.');
+  try{
+    const raw = localStorage.getItem('fenomen_tabs_plus2')
+             || localStorage.getItem('fenomen_tabs_plus')
+             || localStorage.getItem('fenomen_tabs_fix')
+             || localStorage.getItem('fenomen_v2_tabs')
+             || localStorage.getItem('fenomen_v2')
+             || localStorage.getItem('fenomen_v1');
+    if(!raw) return alert('Kayıt bulunamadı.');
+    Object.assign(state, JSON.parse(raw));
+    renderTeachers(); renderStudents();
+    buildGroupsFromStudents(); renderGroupSummary();
+    $("#daysInput").value = state.program.days.join(','); $("#slotsInput").value = state.program.slots;
+    buildProgramGrid(true); renderSlotLabels();
+    reconcileAllToProgram(getAssignPolicy());
+    refreshReqFilterOptions(); renderRequests();
+    renderAssignCards(); refreshPrintFilters(); renderPrintPreview();
+    showTopTab('step1');
+    alert('Yüklendi.');
+  }catch(err){ alert('Yükleme hatası: '+err.message); }
 };
 
 /* Alt sekmeler (Müsaitlik) */
