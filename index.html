@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fenomen Çocuk Kulübü Grup dersleri planlama programı</title>
+<style>
+  :root{
+    --bg:#f6f9fb; --panel:#ffffff; --ink:#0f172a; --muted:#64748b;
+    --pri:#14b8a6; --pri-ink:#083c3a; --acc:#6366f1; --warn:#f59e0b; --danger:#ef4444;
+    --chip:#e2f5f2; --grid:#e5e7eb;
+    --radius:16px;
+  }
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial;}
+  h1,h2,h3{margin:0 0 .4rem}
+  h1{font-size:clamp(20px,3vw,28px);font-weight:800;letter-spacing:.2px}
+  h2{font-size:clamp(18px,2.4vw,22px);font-weight:700}
+  h3{font-size:clamp(16px,2vw,18px);font-weight:700}
+  .app{max-width:1200px;margin:auto;padding:18px}
+  .top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+  .brand{display:flex;align-items:center;gap:10px}
+  .brand .logo{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--pri),#8b5cf6)}
+  .brand .title{display:flex;flex-direction:column}
+  .brand .title small{color:var(--muted)}
+  .wizard{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:12px 0}
+  .step{background:var(--panel);border-radius:12px;padding:10px 12px;border:2px solid transparent;display:flex;align-items:center;gap:10px;cursor:pointer;box-shadow:0 2px 10px rgba(15,23,42,.05)}
+  .step.active{border-color:var(--pri)}
+  .step.done{border-color:#a7f3d0}
+  .content{background:var(--panel);border-radius:var(--radius);box-shadow:0 10px 25px rgba(15,23,42,.06);padding:16px}
+  .grid{display:grid;gap:12px}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+  .btn{appearance:none;border:0;border-radius:12px;padding:12px 16px;background:var(--pri);color:#fff;font-weight:700;cursor:pointer}
+  .btn.sec{background:var(--acc)}
+  .btn.ghost{background:#e2e8f0;color:#0f172a}
+  .btn.warn{background:var(--warn);color:#111827}
+  .btn.danger{background:var(--danger)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input[type=text], input[type=number], select, textarea{
+    padding:12px 12px;border-radius:12px;border:1px solid #cbd5e1;background:#fff;min-width:220px
+  }
+  table{width:100%;border-collapse:separate;border-spacing:0 8px}
+  th,td{padding:10px 12px;background:#fff;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
+  th{position:sticky;top:0;background:#f8fafc;z-index:1}
+  tr{border-radius:10px}
+  .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);font-weight:600;color:var(--pri-ink)}
+  .card{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);border:1px solid #e5e7eb}
+  .kgrid{display:grid;gap:4px}
+  .kgrid[data-cols] {grid-template-columns: 140px repeat(var(--cols), minmax(68px,1fr));}
+  .kcell{border:1px dashed var(--grid);min-height:44px;padding:4px;border-radius:8px;background:#fafafa;display:flex;align-items:center;justify-content:center;text-align:center;cursor:pointer}
+  .kcell.busy{background:#eef2ff;border-color:#c7d2fe}
+  .kcell.bad{background:#fee2e2;border-color:#fecaca}
+  .kcell.ok{background:#dcfce7;border-color:#bbf7d0}
+  .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+  .legend span{padding:6px 10px;border-radius:20px;background:#f1f5f9}
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .wide{width:100%}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  .flex{display:flex;gap:10px;align-items:center}
+  .right{margin-left:auto}
+  .muted{color:var(--muted)}
+  .section-title{display:flex;align-items:center;justify-content:space-between;margin:8px 0}
+  .hr{height:1px;background:#e5e7eb;margin:12px 0}
+  .notice{padding:10px 12px;border-left:4px solid var(--acc);background:#eef2ff;border-radius:8px}
+  dialog{border:0;border-radius:16px;padding:0;max-width:520px;width:92vw;box-shadow:0 30px 70px rgba(2,6,23,.35)}
+  dialog header{padding:14px 16px;border-bottom:1px solid #e5e7eb;font-weight:800}
+  dialog section{padding:14px 16px}
+  dialog footer{padding:14px 16px;border-top:1px solid #e5e7eb;display:flex;gap:8px;justify-content:flex-end}
+  .inline-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mini{font-size:12px}
+  .tag{display:inline-block;background:#f1f5f9;padding:2px 8px;border-radius:999px;margin-left:6px;color:#334155}
+  .nowrap{white-space:nowrap}
+  /* Yazdırma */
+  @media print{
+    body{background:#fff}
+    .no-print{display:none !important}
+    .printable{display:block}
+    .print-wrapper{page-break-inside:avoid}
+    .print-header{font-weight:900;text-align:center;margin-bottom:8px}
+    .print-sub{color:#475569;text-align:center;margin-bottom:12px}
+    .print-table{width:100%;border-collapse:collapse;border:1px solid #000;font-size:12px}
+    .print-table th,.print-table td{border:1px solid #000;padding:6px 8px}
+    .attendance{display:flex;gap:6px;flex-wrap:wrap}
+    .checkbox{display:inline-block;width:14px;height:14px;border:1px solid #000;margin-right:4px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top no-print">
+    <div class="brand">
+      <div class="logo"></div>
+      <div class="title">
+        <h1>Fenomen Çocuk Kulübü</h1>
+        <small>Grup dersleri planlama programı (tek dosya)</small>
+      </div>
+    </div>
+    <div class="flex">
+      <button class="btn ghost" id="btnSaveAll" title="Tüm verileri localStorage'a kaydet">Yerel Kaydet</button>
+      <button class="btn ghost" id="btnLoadAll" title="Tüm verileri localStorage'tan yükle">Yerelden Yükle</button>
+    </div>
+  </div>
+
+  <div class="wizard no-print" id="wizard">
+    <div class="step active" data-step="1"><span class="pill">1</span><b>Veri Kaynağı</b></div>
+    <div class="step" data-step="2"><span class="pill">2</span><b>Ders Programı</b></div>
+    <div class="step" data-step="3"><span class="pill">3</span><b>Müsaitlikler</b></div>
+    <div class="step" data-step="4"><span class="pill">4</span><b>Grup Talepleri</b></div>
+    <div class="step" data-step="5"><span class="pill">5</span><b>Atama Paneli</b></div>
+    <div class="step" data-step="6"><span class="pill">6</span><b>Yazdır</b></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="content grid" id="step1">
+    <div class="section-title">
+      <h2>1) Google Sheet Bağlantısı (YALNIZCA OKUMA)</h2>
+      <div class="chips">
+        <span class="pill">Ogretmenler: OGRETMEN_ADI, BRANS</span>
+        <span class="pill">Ogrenciler: NO, ADSOYAD, SINIF, Grubu</span>
+      </div>
+    </div>
+    <div class="row">
+      <label class="wide">Spreadsheet ID
+        <input class="wide" type="text" id="sheetId" value="1OeDI5rQvWXP6s5OhgRFrh1dThnBMmA9mrCjgYuk1Qtw" />
+      </label>
+      <button class="btn" id="btnFetch">Verileri Oku</button>
+      <button class="btn ghost" id="btnClear">Temizle</button>
+    </div>
+    <div id="readStatus" class="notice">Durum: Hazır.</div>
+    <div class="grid">
+      <div class="card">
+        <h3>Öğretmenler</h3>
+        <div class="hr"></div>
+        <table id="tblTeachers">
+          <thead><tr><th>#</th><th>Öğretmen</th><th>Branş</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Öğrenciler (Grubu dolu olanlar)</h3>
+        <div class="hr"></div>
+        <table id="tblStudents">
+          <thead><tr><th>NO</th><th>Ad Soyad</th><th>Sınıf</th><th>Grup</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Gruplar</h3>
+        <div class="hr"></div>
+        <div id="groupSummary" class="chips"></div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn sec right" id="goto2" disabled>Devam → Ders Programı</button>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="content grid" id="step2" hidden>
+    <div class="section-title">
+      <h2>2) Ders Programı İskele</h2>
+      <div class="chips">
+        <span class="pill">JSON Kaydet/Yükle</span>
+      </div>
+    </div>
+    <div class="row">
+      <label>Günler (virgül ayır)<br/>
+        <input type="text" id="daysInput" value="Pazartesi,Salı,Çarşamba,Perşembe,Cuma" />
+      </label>
+      <label>Saat/Slot sayısı<br/>
+        <input type="number" id="slotsInput" value="8" min="1" max="12" />
+      </label>
+      <button class="btn" id="btnBuildGrid">Oluştur/Güncelle</button>
+      <button class="btn ghost" id="btnProgExport">JSON Dışa Aktar</button>
+      <input id="fileProgImport" type="file" accept="application/json" hidden />
+      <button class="btn ghost" id="btnProgImport">JSON İçeri Al</button>
+    </div>
+    <div id="progGridWrap" class="card"></div>
+    <div class="row">
+      <button class="btn sec right" id="goto3">Devam → Müsaitlikler</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="content grid" id="step3" hidden>
+    <div class="section-title">
+      <h2>3) Müsaitlikler</h2>
+      <div class="legend">
+        <span>● Öğretmen Müsaitliği</span>
+        <span>● Grup Müsaitliği</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btnAvailExport">JSON Dışa Aktar</button>
+      <input id="fileAvailImport" type="file" accept="application/json" hidden />
+      <button class="btn ghost" id="btnAvailImport">JSON İçeri Al</button>
+      <button class="btn warn" id="btnAvailClear">Tüm Müsaitlikleri Temizle</button>
+    </div>
+    <div class="grid">
+      <div class="card">
+        <h3>Öğretmen Müsaitlikleri</h3>
+        <div id="teacherAvailWrap"></div>
+      </div>
+      <div class="card">
+        <h3>Grup Müsaitlikleri</h3>
+        <div id="groupAvailWrap"></div>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn sec right" id="goto4">Devam → Grup Talepleri</button>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="content grid" id="step4" hidden>
+    <div class="section-title">
+      <h2>4) Grupların Haftalık Ders Talepleri</h2>
+      <div class="chips" id="branchChips"></div>
+    </div>
+    <div class="row">
+      <button class="btn ghost" id="btnReqExport">JSON Dışa Aktar</button>
+      <input id="fileReqImport" type="file" accept="application/json" hidden />
+      <button class="btn ghost" id="btnReqImport">JSON İçeri Al</button>
+      <button class="btn warn" id="btnReqClear">Tüm Talepleri Sıfırla</button>
+    </div>
+    <div class="grid" id="reqWrap"></div>
+    <div class="row">
+      <button class="btn sec right" id="goto5">Devam → Atama Paneli</button>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="content grid" id="step5" hidden>
+    <div class="section-title">
+      <h2>5) Atama Paneli</h2>
+      <div class="chips">
+        <span class="pill">Kural: Aynı gruba ardışık aynı branş verilmez</span>
+        <span class="pill">Kural: Branş → öğretmenler dengeli dağıtılır</span>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="btnAutoAssign">Otomatik Atama</button>
+      <button class="btn ghost" id="btnAssgnExport">JSON Dışa Aktar</button>
+      <input id="fileAssgnImport" type="file" accept="application/json" hidden />
+      <button class="btn ghost" id="btnAssgnImport">JSON İçeri Al</button>
+      <button class="btn warn" id="btnAssgnClear">Atamaları Temizle</button>
+    </div>
+    <div id="assignCards" class="cards"></div>
+    <dialog id="dlgAssign">
+      <header>Manuel Atama</header>
+      <section>
+        <div class="grid">
+          <div class="inline-grid">
+            <label>Grup<br/><input type="text" id="dlgGroup" readonly></label>
+            <label>Gün / Saat<br/><input type="text" id="dlgWhen" readonly></label>
+          </div>
+          <div class="inline-grid">
+            <label>Branş<br/>
+              <select id="dlgBranch"></select>
+            </label>
+            <label>Öğretmen<br/>
+              <select id="dlgTeacher"></select>
+            </label>
+          </div>
+        </div>
+      </section>
+      <footer>
+        <button class="btn ghost" id="dlgCancel">Vazgeç</button>
+        <button class="btn" id="dlgOk">Kaydet</button>
+      </footer>
+    </dialog>
+    <div class="row">
+      <button class="btn sec right" id="goto6">Devam → Yazdır</button>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="content grid" id="step6" hidden>
+    <div class="section-title">
+      <h2>6) Yazdır / Rapor</h2>
+      <div class="chips">
+        <span class="pill">A4 çıktı, başlık sabit</span>
+      </div>
+    </div>
+    <div class="row no-print">
+      <label>Görünüm<br/>
+        <select id="printMode">
+          <option value="group">Gruba göre</option>
+          <option value="teacher">Öğretmene göre</option>
+        </select>
+      </label>
+      <label>Filtre<br/>
+        <select id="printFilter"></select>
+      </label>
+      <button class="btn" id="btnRenderPrint">Önizleme</button>
+      <button class="btn sec" onclick="window.print()">Yazdır</button>
+    </div>
+    <div id="printPreview" class="grid printable"></div>
+  </div>
+</div>
+
+<script>
+/* ===========================
+   Küresel Durum (local model)
+   =========================== */
+const state = {
+  teachers: [], // {id,name,branch}
+  students: [], // {no,name,cls,group}
+  groups: {},   // gid => {name, students:[nos]}
+  branches: [], // unique
+  program: { days:["Pazartesi","Salı","Çarşamba","Perşembe","Cuma"], slots:8, cells:{} }, // cells[dayIdx_slotIdx]=text
+  availability: { teachers:{}, groups:{} }, // [id][d][s]=true/false
+  requests: {}, // gid => {branch:count}
+  assignments: [] // {group, day, slot, branch, teacherId}
+};
+
+/* ===============
+   Yardımcılar
+   =============== */
+const $ = (s, r=document)=>r.querySelector(s);
+const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
+const toId = s => String(s).trim().toLowerCase().replace(/\s+/g,'-');
+const keyDS = (d,s) => `${d}_${s}`;
+const download = (name, obj) => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(obj, null, 2)],{type:'application/json'}));
+  a.download = name; a.click();
+};
+const openFile = (inputEl, cb) => { inputEl.onchange = e=>{
+  const f = e.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => cb(JSON.parse(r.result));
+  r.readAsText(f);
+  inputEl.value='';
+}; inputEl.click(); };
+const sum = arr => arr.reduce((a,b)=>a+b,0);
+
+/* ===============================================================
+   1) VERİ KAYNAĞI — Google Sheets GViz JSON (yalnızca okuma)
+   =============================================================== */
+async function gvizFetch(sheetId, sheetName, selectRange){
+  // Neden: GViz JSON saf bir JSON değil, paketli döner → parse edilir
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&headers=1${selectRange?`&range=${encodeURIComponent(selectRange)}`:''}`;
+  const res = await fetch(url, {mode:'cors'});
+  const txt = await res.text();
+  const json = JSON.parse(txt.match(/google\.visualization\.Query\.setResponse\(([\s\S]*?)\);?$/)[1]);
+  const cols = json.table.cols.map(c=>c.label);
+  const rows = (json.table.rows||[]).map(r=>(r.c||[]).map(c=>c?c.v:''));
+  return {columns:cols, rows};
+}
+function renderTeachers(){
+  const tb = $("#tblTeachers tbody"); tb.innerHTML='';
+  state.teachers.forEach((t,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${t.name}</td><td><span class="tag">${t.branch}</span></td>`;
+    tb.appendChild(tr);
+  });
+}
+function renderStudents(){
+  const tb = $("#tblStudents tbody"); tb.innerHTML='';
+  state.students.forEach(st=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="nowrap">${st.no}</td><td>${st.name}</td><td>${st.cls}</td><td><b>${st.group}</b></td>`;
+    tb.appendChild(tr);
+  });
+}
+function buildGroupsFromStudents(){
+  state.groups = {};
+  state.students.forEach(st=>{
+    const gid = st.group;
+    if(!state.groups[gid]) state.groups[gid] = { id:gid, name:gid, students:[] };
+    state.groups[gid].students.push(st.no);
+  });
+}
+function renderGroupSummary(){
+  const wrap = $("#groupSummary"); wrap.innerHTML='';
+  Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+    const el = document.createElement('span'); el.className='pill';
+    el.textContent = `${g.name} • ${g.students.length} öğrenci`;
+    wrap.appendChild(el);
+  });
+}
+
+/* Derleme (Adım 1) */
+async function fetchAll(){
+  const sheetId = $("#sheetId").value.trim();
+  $("#readStatus").textContent = "Okunuyor...";
+  try{
+    // Öğretmenler
+    const t = await gvizFetch(sheetId, 'Ogretmenler');
+    const cT = t.columns.map(s=>s.toUpperCase());
+    const ixName = cT.indexOf('OGRETMEN_ADI');
+    const ixBr   = cT.indexOf('BRANS');
+    if(ixName<0 || ixBr<0) throw new Error("Ogretmenler sayfasında 'OGRETMEN_ADI' ve 'BRANS' sütunları bulunamadı.");
+    state.teachers = t.rows.map(r=>({ id: toId(r[ixName]||("T"+Math.random())), name: r[ixName]||'', branch: r[ixBr]||'' }))
+                           .filter(x=>x.name && x.branch);
+
+    // Öğrenciler
+    const s = await gvizFetch(sheetId, 'Ogrenciler');
+    const cS = s.columns.map(s=>s.toUpperCase());
+    const ixNo = cS.indexOf('NO');
+    const ixAd = cS.indexOf('ADSOYAD');
+    const ixSn = cS.indexOf('SINIF');
+    const ixGr = cS.indexOf('GRUBU');
+    if(ixNo<0 || ixAd<0 || ixSn<0 || ixGr<0) throw new Error("Ogrenciler sayfasında 'NO, ADSOYAD, SINIF, Grubu' sütunlarını doğrulayın.");
+    state.students = s.rows.map(r=>({
+      no: r[ixNo], name: r[ixAd], cls: r[ixSn], group: (r[ixGr]||'').toString().trim()
+    })).filter(x=>x.group); // Grup alanı dolu olanlar
+
+    // Grupları çıkar
+    buildGroupsFromStudents();
+
+    // Branş kümesi
+    state.branches = Array.from(new Set(state.teachers.map(t=>t.branch))).sort((a,b)=>a.localeCompare(b));
+
+    renderTeachers(); renderStudents(); renderGroupSummary();
+    $("#readStatus").textContent = `Tamam: ${state.teachers.length} öğretmen, ${state.students.length} öğrenci, ${Object.keys(state.groups).length} grup.`;
+    $("#goto2").disabled = false;
+    markStepDone(1);
+  }catch(err){
+    $("#readStatus").textContent = "Hata: " + err.message;
+  }
+}
+
+/* =================================
+   2) DERS PROGRAMI — İskele / JSON
+   ================================= */
+function buildProgramGrid(fromRestore=false){
+  // Neden: Program yalnızca iskelet → atamalara ve müsaitliklere referans sağlar
+  if(!fromRestore){
+    state.program.days = $("#daysInput").value.split(',').map(s=>s.trim()).filter(Boolean);
+    state.program.slots = Math.max(1, Math.min(12, parseInt($("#slotsInput").value||"8")));
+  }
+  const days = state.program.days, S = state.program.slots;
+  const wrap = $("#progGridWrap"); wrap.innerHTML='';
+  const grid = document.createElement('div');
+  grid.className = 'kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols = S;
+  // başlık satırı
+  const head = document.createElement('div'); head.className='kgrid'; head.style.setProperty('--cols', S);
+  head.dataset.cols = S; head.style.marginBottom='8px';
+  head.appendChild(Object.assign(document.createElement('div'),{textContent:'Gün / Saat'}));
+  for(let s=0;s<S;s++) head.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+  wrap.appendChild(head);
+
+  days.forEach((d,di)=>{
+    const row = document.createElement('div');
+    row.className = 'kgrid'; row.style.setProperty('--cols', S); row.dataset.cols = S;
+    const lbl = document.createElement('div'); lbl.textContent = d; lbl.style.fontWeight='800'; row.appendChild(lbl);
+    for(let si=0; si<S; si++){
+      const key = keyDS(di,si);
+      const cell = document.createElement('div'); cell.className='kcell';
+      cell.textContent = state.program.cells[key] || '';
+      cell.title = "Not girmek için tıklayın";
+      cell.onclick = ()=>{
+        const val = prompt(`${d} - ${si+1}. saat için not:`, state.program.cells[key]||'');
+        if(val!==null){ state.program.cells[key]=val.trim(); cell.textContent=state.program.cells[key]||''; }
+      };
+      row.appendChild(cell);
+    }
+    wrap.appendChild(row);
+  });
+}
+function exportProgram(){ download('ders-programi.json', state.program); }
+function importProgram(obj){
+  if(!obj || !Array.isArray(obj.days) || typeof obj.slots!=='number') return alert('Geçersiz program JSON.');
+  state.program = obj; $("#daysInput").value = obj.days.join(','); $("#slotsInput").value = obj.slots;
+  buildProgramGrid(true);
+}
+
+/* ===========================
+   3) MÜSAİTLİK – Öğrt/Grup
+   =========================== */
+function ensureAvailMaps(){
+  const D = state.program.days.length, S = state.program.slots;
+  // Öğretmenler
+  state.teachers.forEach(t=>{
+    state.availability.teachers[t.id] = state.availability.teachers[t.id] || Array.from({length:D},()=>Array(S).fill(true)); // varsayılan: uygun
+  });
+  // Gruplar
+  Object.values(state.groups).forEach(g=>{
+    state.availability.groups[g.id] = state.availability.groups[g.id] || Array.from({length:D},()=>Array(S).fill(true));
+  });
+}
+function renderAvailGrids(){
+  ensureAvailMaps();
+  const D=state.program.days.length, S=state.program.slots, days=state.program.days;
+
+  const tWrap=$("#teacherAvailWrap"); tWrap.innerHTML='';
+  state.teachers.forEach(t=>{
+    const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
+    card.innerHTML = `<div class="flex"><b>${t.name}</b><span class="tag">${t.branch}</span></div>`;
+    const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
+    // başlık
+    const head = document.createElement('div'); head.textContent='Gün / Saat'; grid.appendChild(head);
+    for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+    // satırlar
+    for(let d=0; d<D; d++){
+      const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
+      row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
+      for(let s=0;s<S;s++){
+        const cell = document.createElement('div'); cell.className='kcell ' + (state.availability.teachers[t.id][d][s]?'ok':'bad');
+        cell.textContent = state.availability.teachers[t.id][d][s]?'Uygun':'Değil';
+        cell.onclick = ()=>{
+          const cur = state.availability.teachers[t.id][d][s];
+          state.availability.teachers[t.id][d][s] = !cur;
+          cell.className='kcell ' + (!cur?'ok':'bad');
+          cell.textContent = !cur ? 'Uygun' : 'Değil';
+        };
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+    card.appendChild(grid); tWrap.appendChild(card);
+  });
+
+  const gWrap=$("#groupAvailWrap"); gWrap.innerHTML='';
+  Object.values(state.groups).forEach(g=>{
+    const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
+    card.innerHTML = `<div class="flex"><b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span></div>`;
+    const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
+    const head = document.createElement('div'); head.textContent='Gün / Saat'; grid.appendChild(head);
+    for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+    for(let d=0; d<D; d++){
+      const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
+      row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
+      for(let s=0;s<S;s++){
+        const cell = document.createElement('div'); cell.className='kcell ' + (state.availability.groups[g.id][d][s]?'ok':'bad');
+        cell.textContent = state.availability.groups[g.id][d][s]?'Uygun':'Değil';
+        cell.onclick = ()=>{
+          const cur = state.availability.groups[g.id][d][s];
+          state.availability.groups[g.id][d][s] = !cur;
+          cell.className='kcell ' + (!cur?'ok':'bad');
+          cell.textContent = !cur ? 'Uygun' : 'Değil';
+        };
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+    card.appendChild(grid); gWrap.appendChild(card);
+  });
+}
+const exportAvail = ()=>download('musaitlikler.json', state.availability);
+const importAvail = obj=>{
+  if(!obj || !obj.teachers || !obj.groups) return alert('Geçersiz müsaitlik JSON.');
+  state.availability = obj; renderAvailGrids();
+};
+
+/* ===============================
+   4) GRUP DERS TALEPLERİ (hafta)
+   =============================== */
+function ensureRequests(){
+  Object.values(state.groups).forEach(g=>{
+    state.requests[g.id] = state.requests[g.id] || {};
+    state.branches.forEach(b=>{
+      if(typeof state.requests[g.id][b] !== 'number') state.requests[g.id][b] = 0;
+    });
+  });
+}
+function renderRequests(){
+  ensureRequests();
+  // Branş çipleri
+  const bc = $("#branchChips"); bc.innerHTML='';
+  state.branches.forEach(b=>{ const x=document.createElement('span'); x.className='pill'; x.textContent=b; bc.appendChild(x); });
+  // Gruplar formları
+  const wrap = $("#reqWrap"); wrap.innerHTML='';
+  Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+    const card = document.createElement('div'); card.className='card';
+    const head = document.createElement('div'); head.className='flex';
+    head.innerHTML = `<b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span>`;
+    card.appendChild(head);
+    // branş girişleri
+    const grid = document.createElement('div'); grid.className='inline-grid';
+    state.branches.forEach(b=>{
+      const lab = document.createElement('label');
+      lab.innerHTML = `${b}<br/><input type="number" min="0" value="${state.requests[g.id][b]||0}" />`;
+      lab.querySelector('input').oninput = (e)=>{ state.requests[g.id][b] = parseInt(e.target.value||"0"); };
+      grid.appendChild(lab);
+    });
+    card.appendChild(grid);
+    wrap.appendChild(card);
+  });
+}
+const exportReq = ()=>download('grup-talepleri.json', state.requests);
+const importReq = obj=>{
+  if(!obj || typeof obj!=='object') return alert('Geçersiz talepler JSON.');
+  state.requests = obj; renderRequests();
+};
+
+/* ======================
+   5) ATAMA PANELİ
+   ====================== */
+function findTeacherOptions(branch){
+  return state.teachers.filter(t=>t.branch===branch);
+}
+function isTeacherBusy(teacherId, day, slot){
+  return state.assignments.some(a=>a.teacherId===teacherId && a.day===day && a.slot===slot);
+}
+function isGroupBusy(groupId, day, slot){
+  return state.assignments.some(a=>a.group===groupId && a.day===day && a.slot===slot);
+}
+function prevGroupSubject(groupId, day, slot){
+  // Aynı gün → bir önceki slotta ne var?
+  if(slot>0){
+    const a = state.assignments.find(x=>x.group===groupId && x.day===day && x.slot===slot-1);
+    return a ? a.branch : null;
+  }
+  // Bir önceki günün son slotu
+  if(day>0){
+    const a = state.assignments.find(x=>x.group===groupId && x.day===day-1 && x.slot===state.program.slots-1);
+    return a ? a.branch : null;
+  }
+  return null;
+}
+function renderAssignCards(){
+  const wrap = $("#assignCards"); wrap.innerHTML='';
+  const days = state.program.days, S=state.program.slots;
+
+  Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+    const card = document.createElement('div'); card.className='card';
+    const head = document.createElement('div'); head.className='flex';
+    head.innerHTML = `<b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span>`;
+    card.appendChild(head);
+
+    const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
+
+    const headRow = document.createElement('div'); headRow.textContent='Gün / Saat'; grid.appendChild(headRow);
+    for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+
+    for(let d=0; d<days.length; d++){
+      const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
+      row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
+      for(let s=0; s<S; s++){
+        const cell = document.createElement('div'); cell.className='kcell'; cell.dataset.d=d; cell.dataset.s=s;
+        // bulunan atama?
+        const cur = state.assignments.find(a=>a.group===g.id && a.day===d && a.slot===s);
+        if(cur){ cell.classList.add('busy'); cell.textContent = `${cur.branch}\n${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}`; }
+        // hücre tıklama
+        cell.onclick = ()=>{
+          openAssignDialog(g.id, d, s);
+        };
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+
+    card.appendChild(grid);
+    // talepler özeti
+    const req = state.requests[g.id]||{};
+    const reqInfo = Object.entries(req).filter(([b,c])=>c>0).map(([b,c])=>`${b}:${c}`).join(' • ') || 'Talep yok';
+    const foot = document.createElement('div'); foot.className='muted mini'; foot.textContent = `Haftalık talepler: ${reqInfo}`;
+    card.appendChild(foot);
+
+    wrap.appendChild(card);
+  });
+}
+// Manuel atama iletişim kutusu
+const dlg = $("#dlgAssign");
+let dlgCtx = null;
+function openAssignDialog(group, day, slot){
+  dlgCtx = {group, day, slot};
+  $("#dlgGroup").value = group;
+  $("#dlgWhen").value = `${state.program.days[day]} • ${slot+1}. saat`;
+  // Branş listesi
+  const selB = $("#dlgBranch"); selB.innerHTML='';
+  state.branches.forEach(b=>{
+    const opt=document.createElement('option'); opt.value=b; opt.textContent=b; selB.appendChild(opt);
+  });
+  selB.onchange = fillTeachersForBranch;
+  fillTeachersForBranch();
+  dlg.showModal();
+}
+function fillTeachersForBranch(){
+  const branch = $("#dlgBranch").value;
+  const selT = $("#dlgTeacher"); selT.innerHTML='';
+  findTeacherOptions(branch).forEach(t=>{
+    const opt = document.createElement('option'); opt.value=t.id; opt.textContent=t.name;
+    selT.appendChild(opt);
+  });
+}
+$("#dlgCancel").onclick = ()=> dlg.close();
+$("#dlgOk").onclick = ()=>{
+  const {group, day, slot} = dlgCtx;
+  const branch = $("#dlgBranch").value;
+  const teacherId = $("#dlgTeacher").value;
+
+  // Neden: Manuel atamada sınırlama yok ama çakışmayı uyarmak kullanıcıya destek olur
+  if(isTeacherBusy(teacherId, day, slot)) if(!confirm("Öğretmen bu saatte başka derste. Yine de ata?")) return;
+  if(isGroupBusy(group, day, slot)) if(!confirm("Bu gruba bu saatte başka atama var. Üzerine yazılsın mı?")) return;
+
+  // Sil & ekle
+  state.assignments = state.assignments.filter(a=>!(a.group===group && a.day===day && a.slot===slot));
+  state.assignments.push({group, day, slot, branch, teacherId});
+  dlg.close();
+  renderAssignCards();
+};
+
+/* Otomatik atama — basit, kural odaklı dağıtım */
+function autoAssign(){
+  const D = state.program.days.length, S = state.program.slots;
+  // Branş→öğretmen yük sayaçları (denge)
+  const load = {}; // load[branch][teacherId]
+  state.branches.forEach(b=>{
+    load[b] = {};
+    findTeacherOptions(b).forEach(t=>load[b][t.id]=0);
+  });
+
+  // önce mevcut atamaları say
+  state.assignments.forEach(a=>{
+    if(load[a.branch] && load[a.branch][a.teacherId]!=null) load[a.branch][a.teacherId]++;
+  });
+
+  // her grup için istekleri sıraya koy
+  const groups = Object.values(state.groups).map(g=>{
+    const need = [];
+    const req = state.requests[g.id]||{};
+    Object.entries(req).forEach(([b,c])=>{
+      for(let i=0;i<c;i++) need.push(b);
+    });
+    return {id:g.id, need};
+  });
+
+  // Zamanı soldan-sağa, yukarıdan-aşağı gez → her grup için uygun bir ders/öğretmen ata
+  for(let d=0; d<D; d++){
+    for(let s=0; s<S; s++){
+      for(const g of groups){
+        if(g.need.length===0) continue;
+        if(state.availability.groups[g.id]?.[d]?.[s]!==true) continue;
+        if(isGroupBusy(g.id, d, s)) continue;
+        // Önce önceki dersle aynı branşı engelle
+        const prev = prevGroupSubject(g.id, d, s);
+        // Bu slot için denenebilecek branşlar: ihtiyaç listesinden, önce çeşitlendirme ile sırala
+        const uniq = Array.from(new Set(g.need));
+        const tryBranches = [...uniq.filter(b=>b!==prev), ...uniq.filter(b=>b===prev)];
+        let placed = false;
+
+        for(const b of tryBranches){
+          // uygun öğretmen adayları
+          const teachers = findTeacherOptions(b).filter(t=>{
+            return state.availability.teachers[t.id]?.[d]?.[s]===true && !isTeacherBusy(t.id, d, s);
+          });
+          if(teachers.length===0) continue;
+
+          // denge: o branşta en az yükte olan öğretmeni seç
+          teachers.sort((a,b2)=>(load[b][a.id]??0) - (load[b][b2.id]??0));
+          const tPick = teachers[0];
+
+          // ata
+          state.assignments = state.assignments.filter(a=>!(a.group===g.id && a.day===d && a.slot===s));
+          state.assignments.push({group:g.id, day:d, slot:s, branch:b, teacherId:tPick.id});
+          // sayaç güncelle
+          load[b][tPick.id] = (load[b][tPick.id]||0)+1;
+          // ihtiyaç listesinden bu branştan birini düş
+          const idx = g.need.indexOf(b); if(idx>-1) g.need.splice(idx,1);
+          placed = true;
+          break;
+        }
+        // yerleşemediyse boş bırak
+        if(!placed) {/* no-op */}
+      }
+    }
+  }
+  renderAssignCards();
+}
+
+/* Export/Import assignments */
+const exportAssgn = ()=>download('atamalar.json', state.assignments);
+const importAssgn = obj=>{
+  if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.');
+  state.assignments = obj; renderAssignCards();
+};
+
+/* ==========================
+   6) YAZDIR / RAPOR OLUŞTUR
+   ========================== */
+function renderPrintPreview(){
+  const mode = $("#printMode").value;
+  const filter = $("#printFilter").value;
+  const div = $("#printPreview"); div.innerHTML='';
+
+  const hdr = document.createElement('div');
+  hdr.className='print-header';
+  hdr.innerHTML = '<h2>Fenomen Çocuk Kulübü Grup dersleri planlama programı</h2>';
+  div.appendChild(hdr);
+
+  const sub = document.createElement('div');
+  sub.className='print-sub';
+  sub.textContent = (mode==='group' ? `Grup: ${filter||'Tümü'}` : `Öğretmen: ${filter||'Tümü'}`);
+  div.appendChild(sub);
+
+  const days = state.program.days, S=state.program.slots;
+
+  if(mode==='group'){
+    const groups = filter ? [state.groups[filter]] : Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name));
+    groups.forEach(g=>{
+      if(!g) return;
+      const wr = document.createElement('div'); wr.className='print-wrapper';
+      const t = document.createElement('table'); t.className='print-table';
+      const thead = `<tr><th colspan="${S+1}">${g.name} • ${g.students.length} öğrenci</th></tr>
+                     <tr><th>Gün/Saat</th>${Array.from({length:S},(_,i)=>`<th>${i+1}</th>`).join('')}</tr>`;
+      let body='';
+      for(let d=0; d<days.length; d++){
+        let row=`<tr><td><b>${days[d]}</b></td>`;
+        for(let s=0; s<S; s++){
+          const a = state.assignments.find(x=>x.group===g.id && x.day===d && x.slot===s);
+          row += `<td>${a? `<b>${a.branch}</b><br/>${state.teachers.find(t=>t.id===a.teacherId)?.name||''}` : ''}</td>`;
+        }
+        row+='</tr>'; body+=row;
+      }
+      t.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`;
+      wr.appendChild(t);
+
+      // Öğrenci listesi
+      const sTbl = document.createElement('table'); sTbl.className='print-table';
+      const students = state.students.filter(st=>st.group===g.id);
+      sTbl.innerHTML = `<thead><tr><th colspan="5">Öğrenci Listesi</th></tr></thead>
+                        <tbody>${students.map(st=>`<tr><td>${st.no}</td><td>${st.name}</td><td>${st.cls}</td>
+                        <td colspan="2"></td></tr>`).join('')}</tbody>`;
+      wr.appendChild(sTbl);
+
+      div.appendChild(wr);
+    });
+  } else {
+    const teachers = filter ? [state.teachers.find(t=>t.id===filter)] : state.teachers;
+    teachers.filter(Boolean).forEach(t=>{
+      const wr = document.createElement('div'); wr.className='print-wrapper';
+      const tTbl = document.createElement('table'); tTbl.className='print-table';
+      const thead = `<tr><th colspan="${S+1}">${t.name} — ${t.branch}</th></tr>
+                     <tr><th>Gün/Saat</th>${Array.from({length:S},(_,i)=>`<th>${i+1}</th>`).join('')}</tr>`;
+      let body='';
+      for(let d=0; d<days.length; d++){
+        let row=`<tr><td><b>${days[d]}</b></td>`;
+        for(let s=0; s<S; s++){
+          const a = state.assignments.find(x=>x.teacherId===t.id && x.day===d && x.slot===s);
+          if(a){
+            const g = state.groups[a.group];
+            row += `<td><b>${a.branch}</b><br/>Grup: ${g?.name||''}</td>`;
+          }else row += `<td></td>`;
+        }
+        row+='</tr>'; body+=row;
+      }
+      tTbl.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`;
+      wr.appendChild(tTbl);
+
+      // Öğrenciler + yoklama kutuları
+      const lessons = state.assignments.filter(a=>a.teacherId===t.id);
+      const groupsTouched = Array.from(new Set(lessons.map(a=>a.group)));
+      groupsTouched.forEach(gid=>{
+        const g = state.groups[gid];
+        const sTbl = document.createElement('table'); sTbl.className='print-table';
+        const students = state.students.filter(st=>st.group===gid);
+        sTbl.innerHTML = `<thead><tr><th colspan="6">${g?.name||gid} — Öğrenci Yoklama</th></tr>
+                          <tr><th>No</th><th>Ad Soyad</th><th>Sınıf</th>
+                              <th>Geldi</th><th>Gelmedi</th><th>Geç geldi / İzinli</th></tr></thead>
+                          <tbody>${students.map(st=>`
+                            <tr><td>${st.no}</td><td>${st.name}</td><td>${st.cls}</td>
+                                <td><span class="checkbox"></span></td>
+                                <td><span class="checkbox"></span></td>
+                                <td><span class="checkbox"></span></td></tr>`).join('')}
+                          </tbody>`;
+        wr.appendChild(sTbl);
+      });
+
+      div.appendChild(wr);
+    });
+  }
+}
+
+/* Yazdırma filtre seçenekleri */
+function refreshPrintFilters(){
+  const mode = $("#printMode").value;
+  const sel = $("#printFilter"); sel.innerHTML='';
+  if(mode==='group'){
+    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Gruplar)'; sel.appendChild(opt0);
+    Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+      const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
+    });
+  }else{
+    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Öğretmenler)'; sel.appendChild(opt0);
+    state.teachers.forEach(t=>{
+      const opt=document.createElement('option'); opt.value=t.id; opt.textContent=`${t.name} — ${t.branch}`; sel.appendChild(opt);
+    });
+  }
+}
+
+/* ===============
+   Adım geçişleri
+   =============== */
+function showStep(n){
+  for(let i=1;i<=6;i++){ const el=$("#step"+i); if(!el) continue; el.hidden = (i!==n); }
+  $$(".step").forEach(s=>s.classList.toggle('active', s.dataset.step==n));
+}
+function markStepDone(n){ $$(".step").forEach(s=>{ if(+s.dataset.step===n) s.classList.add('done'); }); }
+
+/* =======================
+   Yerel Depo (hepsi tek)
+   ======================= */
+function saveAll(){
+  localStorage.setItem('fenomen_v1', JSON.stringify(state));
+  alert('Yerel olarak kaydedildi.');
+}
+function loadAll(){
+  const raw = localStorage.getItem('fenomen_v1'); if(!raw) return alert('Kayıt bulunamadı.');
+  const obj = JSON.parse(raw);
+  Object.assign(state, obj);
+  // UI tazele
+  renderTeachers(); renderStudents(); renderGroupSummary();
+  $("#daysInput").value = state.program.days.join(','); $("#slotsInput").value = state.program.slots;
+  buildProgramGrid(true);
+  renderAvailGrids();
+  renderRequests();
+  renderAssignCards();
+  refreshPrintFilters();
+  alert('Yüklendi.');
+}
+
+/* ======================
+   Olay bağlamaları
+   ====================== */
+$("#btnFetch").onclick = fetchAll;
+$("#btnClear").onclick = ()=>{
+  state.teachers=[]; state.students=[]; state.groups={}; state.branches=[];
+  renderTeachers(); renderStudents(); renderGroupSummary(); $("#goto2").disabled=true;
+  $("#readStatus").textContent='Temizlendi.';
+};
+$("#goto2").onclick = ()=>{ showStep(2); };
+$("#btnBuildGrid").onclick = ()=>{ buildProgramGrid(); };
+$("#btnProgExport").onclick = exportProgram;
+$("#btnProgImport").onclick = ()=>openFile($("#fileProgImport"), importProgram);
+$("#goto3").onclick = ()=>{ ensureAvailMaps(); renderAvailGrids(); showStep(3); markStepDone(2); };
+$("#btnAvailExport").onclick = exportAvail;
+$("#btnAvailImport").onclick = ()=>openFile($("#fileAvailImport"), importAvail);
+$("#btnAvailClear").onclick = ()=>{ state.availability={teachers:{},groups:{}}; renderAvailGrids(); };
+
+$("#goto4").onclick = ()=>{ renderRequests(); showStep(4); markStepDone(3); };
+$("#btnReqExport").onclick = exportReq;
+$("#btnReqImport").onclick = ()=>openFile($("#fileReqImport"), importReq);
+$("#btnReqClear").onclick = ()=>{ state.requests={}; renderRequests(); };
+
+$("#goto5").onclick = ()=>{ renderAssignCards(); showStep(5); markStepDone(4); };
+$("#btnAutoAssign").onclick = autoAssign;
+$("#btnAssgnExport").onclick = exportAssgn;
+$("#btnAssgnImport").onclick = ()=>openFile($("#fileAssgnImport"), importAssgn);
+$("#btnAssgnClear").onclick = ()=>{ state.assignments=[]; renderAssignCards(); };
+
+$("#goto6").onclick = ()=>{ refreshPrintFilters(); renderPrintPreview(); showStep(6); markStepDone(5); };
+$("#printMode").onchange = ()=>{ refreshPrintFilters(); };
+$("#btnRenderPrint").onclick = renderPrintPreview;
+
+$("#btnSaveAll").onclick = saveAll;
+$("#btnLoadAll").onclick = loadAll;
+
+// Adım tıklanarak geçiş
+$$(".step").forEach(s=>s.onclick=()=>showStep(parseInt(s.dataset.step)));
+
+// Başlangıç grid & filtre
+buildProgramGrid();
+refreshPrintFilters();
+</script>
+</body>
+</html>
