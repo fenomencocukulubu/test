@@ -4,7 +4,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Fenomen Çocuk Kulübü Grup dersleri planlama programı</title>
+<title>Fenomen Çocuk Kulübü Grup dersleri planlama (tablı sürüm)</title>
 <style>
   :root{
     --bg:#f6f9fb; --panel:#ffffff; --ink:#0f172a; --muted:#64748b;
@@ -38,6 +38,7 @@
   table{width:100%;border-collapse:separate;border-spacing:0 8px}
   th,td{padding:10px 12px;background:#fff;border-top:1px solid #e5e7eb;border-bottom:1px solid #e5e7eb}
   th{position:sticky;top:0;background:#f8fafc;z-index:1}
+  tr{border-radius:10px}
   .pill{display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--chip);font-weight:600;color:var(--pri-ink)}
   .card{background:#fff;border-radius:16px;padding:12px;box-shadow:0 8px 20px rgba(15,23,42,.06);border:1px solid #e5e7eb}
   .kgrid{display:grid;gap:4px}
@@ -58,7 +59,7 @@
   .tag{display:inline-block;background:#f1f5f9;padding:2px 8px;border-radius:999px;margin-left:6px;color:#334155}
   .nowrap{white-space:nowrap}
 
-  /* Tabs (genel) */
+  /* Üst sekmeler */
   .tabs{display:flex;gap:6px;border-bottom:1px solid #e5e7eb;margin-bottom:8px}
   .tab{padding:10px 14px;border-radius:10px 10px 0 0;background:#eef2ff;color:#1f2937;cursor:pointer;font-weight:700;user-select:none}
   .tab[aria-selected="true"]{background:#fff;border:1px solid #e5e7eb;border-bottom-color:#fff}
@@ -75,7 +76,6 @@
     .print-page{page-break-after:always;break-after:page}
     .print-table{width:100%;border-collapse:collapse;border:1px solid #000;font-size:11px}
     .print-table th,.print-table td{border:1px solid #000;padding:4px 6px;vertical-align:top}
-    .attendance{display:flex;gap:6px;flex-wrap:wrap}
     .checkbox{display:inline-block;width:14px;height:14px;border:1px solid #000;margin-right:4px}
     .tight th,.tight td{padding:3px 4px;font-size:10.5px}
     .avoid-break{page-break-inside:avoid;break-inside:avoid}
@@ -89,7 +89,7 @@
       <div class="logo"></div>
       <div class="title">
         <h1>Fenomen Çocuk Kulübü</h1>
-        <small>Grup dersleri planlama (tablı sürüm)</small>
+        <small>Grup dersleri planlama • Tablı</small>
       </div>
     </div>
     <div class="flex">
@@ -100,16 +100,16 @@
 
   <!-- ÜST SEKMELER -->
   <div class="tabs no-print" role="tablist" aria-label="Ana Sekmeler" id="topTabs">
-    <button class="tab" id="tab-step1" role="tab" aria-controls="step1" aria-selected="true">1. Veri Kaynağı</button>
-    <button class="tab" id="tab-step2" role="tab" aria-controls="step2" aria-selected="false">2. Ders Programı</button>
-    <button class="tab" id="tab-step3" role="tab" aria-controls="step3" aria-selected="false">3. Müsaitlikler</button>
-    <button class="tab" id="tab-step4" role="tab" aria-controls="step4" aria-selected="false">4. Grup Talepleri</button>
-    <button class="tab" id="tab-step5" role="tab" aria-controls="step5" aria-selected="false">5. Atama Paneli</button>
-    <button class="tab" id="tab-step6" role="tab" aria-controls="step6" aria-selected="false">6. Yazdır</button>
+    <button class="tab" data-panel="step1" role="tab" aria-selected="true">1. Veri Kaynağı</button>
+    <button class="tab" data-panel="step2" role="tab" aria-selected="false">2. Ders Programı</button>
+    <button class="tab" data-panel="step3" role="tab" aria-selected="false">3. Müsaitlikler</button>
+    <button class="tab" data-panel="step4" role="tab" aria-selected="false">4. Grup Talepleri</button>
+    <button class="tab" data-panel="step5" role="tab" aria-selected="false">5. Atama Paneli</button>
+    <button class="tab" data-panel="step6" role="tab" aria-selected="false">6. Yazdır</button>
   </div>
 
   <!-- STEP 1 -->
-  <section class="content grid tabpanel" id="step1" role="tabpanel" aria-labelledby="tab-step1">
+  <section class="content grid tabpanel" id="step1" role="tabpanel">
     <div class="section-title">
       <h2>1) Google Sheet Bağlantısı (YALNIZCA OKUMA)</h2>
       <div class="chips">
@@ -146,7 +146,7 @@
   </section>
 
   <!-- STEP 2 -->
-  <section class="content grid tabpanel" id="step2" role="tabpanel" aria-labelledby="tab-step2" hidden>
+  <section class="content grid tabpanel" id="step2" role="tabpanel" hidden>
     <div class="section-title">
       <h2>2) Ders Programı İskele</h2>
       <div class="chips"><span class="pill">JSON Kaydet/Yükle</span></div>
@@ -170,7 +170,7 @@
   </section>
 
   <!-- STEP 3 -->
-  <section class="content grid tabpanel" id="step3" role="tabpanel" aria-labelledby="tab-step3" hidden>
+  <section class="content grid tabpanel" id="step3" role="tabpanel" hidden>
     <div class="section-title">
       <h2>3) Müsaitlikler</h2>
       <div class="legend">
@@ -179,13 +179,12 @@
       </div>
     </div>
 
-    <!-- ALT SEKMELER -->
     <div class="tabs no-print" role="tablist" aria-label="Müsaitlik Sekmeleri">
-      <button class="tab" id="tabTeach" role="tab" aria-controls="panelTeach" aria-selected="true">Öğretmen Müsaitlik</button>
-      <button class="tab" id="tabGroup" role="tab" aria-controls="panelGroup" aria-selected="false">Grup Müsaitlik</button>
+      <button class="tab" id="tabTeach" role="tab" aria-selected="true">Öğretmen Müsaitlik</button>
+      <button class="tab" id="tabGroup" role="tab" aria-selected="false">Grup Müsaitlik</button>
     </div>
 
-    <div id="panelTeach" class="tabpanel" role="tabpanel" aria-labelledby="tabTeach">
+    <div id="panelTeach" role="tabpanel">
       <div class="row no-print">
         <button class="btn ghost" id="btnAvailExport">JSON Dışa Aktar</button>
         <input id="fileAvailImport" type="file" accept="application/json" hidden />
@@ -198,7 +197,7 @@
       </div>
     </div>
 
-    <div id="panelGroup" class="tabpanel" role="tabpanel" aria-labelledby="tabGroup" hidden>
+    <div id="panelGroup" role="tabpanel" hidden>
       <div class="row no-print">
         <button class="btn ghost" id="btnAvailExport2">JSON Dışa Aktar</button>
         <input id="fileAvailImport2" type="file" accept="application/json" hidden />
@@ -216,7 +215,7 @@
   </section>
 
   <!-- STEP 4 -->
-  <section class="content grid tabpanel" id="step4" role="tabpanel" aria-labelledby="tab-step4" hidden>
+  <section class="content grid tabpanel" id="step4" role="tabpanel" hidden>
     <div class="section-title">
       <h2>4) Grupların Haftalık Ders Talepleri</h2>
       <div class="chips" id="branchChips"></div>
@@ -237,12 +236,12 @@
   </section>
 
   <!-- STEP 5 -->
-  <section class="content grid tabpanel" id="step5" role="tabpanel" aria-labelledby="tab-step5" hidden>
+  <section class="content grid tabpanel" id="step5" role="tabpanel" hidden>
     <div class="section-title">
       <h2>5) Atama Paneli</h2>
       <div class="chips">
-        <span class="pill">Kural: Aynı gruba ardışık aynı branş verilmez</span>
-        <span class="pill">Kural: Branş → öğretmenler dengeli dağıtılır</span>
+        <span class="pill">Aynı gruba ardışık aynı branş verilmez</span>
+        <span class="pill">Branşa göre öğretmen yükü dengelenir</span>
       </div>
     </div>
     <div class="row">
@@ -253,6 +252,7 @@
       <button class="btn warn" id="btnAssgnClear">Atamaları Temizle</button>
     </div>
     <div id="assignCards" class="cards"></div>
+
     <dialog id="dlgAssign">
       <header>Manuel Atama</header>
       <section>
@@ -272,18 +272,19 @@
         <button class="btn" id="dlgOk">Kaydet</button>
       </footer>
     </dialog>
+
     <div class="row">
       <button class="btn sec right" id="goto6">Devam → Yazdır</button>
     </div>
   </section>
 
   <!-- STEP 6 -->
-  <section class="content grid tabpanel" id="step6" role="tabpanel" aria-labelledby="tab-step6" hidden>
+  <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
     <div class="section-title">
       <h2>6) Yazdır / Rapor</h2>
       <div class="chips">
         <span class="pill">A4 çıktı, sayfa başı öğretmen/grup</span>
-        <span class="pill">Sadece atama varsa görünür</span>
+        <span class="pill">Sadece atama varsa</span>
       </div>
     </div>
     <div class="row no-print">
@@ -331,34 +332,33 @@ const openFile = (inputEl, cb) => { inputEl.onchange = e=>{
   r.onload = () => cb(JSON.parse(r.result));
   r.readAsText(f); inputEl.value='';
 }; inputEl.click(); };
-const sum = arr => arr.reduce((a,b)=>a+b,0);
+const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 
-/* ===== ÜST SEKMELER (GENEL) ===== */
+/* ===== ÜST SEKMELER (render tetikleyen) ===== */
 function showTopTab(panelId){
-  // Neden: Eski wizard yerine gerçek tab davranışı
-  // Paneller
   ['step1','step2','step3','step4','step5','step6'].forEach(id=>{
     const el = $('#'+id);
     if(!el) return;
-    const active = (id===panelId);
-    if(active) el.removeAttribute('hidden'); else el.setAttribute('hidden','');
+    if(id===panelId) el.removeAttribute('hidden'); else el.setAttribute('hidden','');
   });
-  // Üst sekmeler
   $$('#topTabs .tab').forEach(tab=>{
-    const controls = tab.getAttribute('aria-controls');
-    tab.setAttribute('aria-selected', controls===panelId ? 'true' : 'false');
+    tab.setAttribute('aria-selected', tab.dataset.panel===panelId ? 'true' : 'false');
   });
+
+  // Panel özel render/tazeleme
+  if(panelId==='step2'){ buildProgramGrid(true); }
+  if(panelId==='step3'){ reconcileAllToProgram(); renderAvailGrids(); }
+  if(panelId==='step4'){ refreshReqFilterOptions(); renderRequests(); }
+  if(panelId==='step5'){ renderAssignCards(); }
+  if(panelId==='step6'){ refreshPrintFilters(); renderPrintPreview(); }
 }
 function bindTopTabs(){
   $$('#topTabs .tab').forEach(tab=>{
-    tab.addEventListener('click', ()=>{
-      const panelId = tab.getAttribute('aria-controls');
-      showTopTab(panelId);
-    });
+    tab.addEventListener('click', ()=> showTopTab(tab.dataset.panel));
   });
 }
 
-/* ====== 1) Veri Kaynağı ====== */
+/* ===== 1) Veri Kaynağı ===== */
 async function gvizFetch(sheetId, sheetName, selectRange){
   const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&headers=1${selectRange?`&range=${encodeURIComponent(selectRange)}`:''}`;
   const res = await fetch(url, {mode:'cors'});
@@ -408,7 +408,7 @@ async function fetchAll(){
     const cT = t.columns.map(s=>s.toUpperCase());
     const ixName = cT.indexOf('OGRETMEN_ADI');
     const ixBr   = cT.indexOf('BRANS');
-    if(ixName<0 || ixBr<0) throw new Error("Ogretmenler sayfasında 'OGRETMEN_ADI' ve 'BRANS' sütunları bulunamadı.");
+    if(ixName<0 || ixBr<0) throw new Error("Ogretmenler sayfasında 'OGRETMEN_ADI' ve 'BRANS' yok.");
     state.teachers = t.rows.map(r=>{
       const name = (r[ixName]||'').toString().trim();
       const bRaw = (r[ixBr]||'').toString().trim().toUpperCase();
@@ -422,7 +422,7 @@ async function fetchAll(){
     const ixAd = cS.indexOf('ADSOYAD');
     const ixSn = cS.indexOf('SINIF');
     const ixGr = cS.indexOf('GRUBU');
-    if(ixNo<0 || ixAd<0 || ixSn<0 || ixGr<0) throw new Error("Ogrenciler: NO/ADSOYAD/SINIF/Grubu kontrol edin.");
+    if(ixNo<0 || ixAd<0 || ixSn<0 || ixGr<0) throw new Error("Ogrenciler: NO/ADSOYAD/SINIF/Grubu eksik.");
     state.students = s.rows.map(r=>({
       no: r[ixNo], name: r[ixAd], cls: r[ixSn], group: (r[ixGr]||'').toString().trim()
     })).filter(x=>x.group);
@@ -432,6 +432,9 @@ async function fetchAll(){
 
     renderTeachers(); renderStudents(); renderGroupSummary();
     $("#readStatus").textContent = `Tamam: ${state.teachers.length} öğretmen, ${state.students.length} öğrenci, ${Object.keys(state.groups).length} grup.`;
+
+    // Veri geldiyse müsaitlik matrislerini mevcut programa göre hazırla
+    reconcileAllToProgram();
   }catch(err){
     $("#readStatus").textContent = "Hata: " + err.message;
   }
@@ -441,19 +444,18 @@ async function fetchAll(){
 function buildProgramGrid(fromRestore=false){
   if(!fromRestore){
     state.program.days = $("#daysInput").value.split(',').map(s=>s.trim()).filter(Boolean);
-    state.program.slots = Math.max(1, Math.min(12, parseInt($("#slotsInput").value||"8")));
+    state.program.slots = clamp(parseInt($("#slotsInput").value||"8"), 1, 12);
   }
   const days = state.program.days, S = state.program.slots;
   const wrap = $("#progGridWrap"); wrap.innerHTML='';
-  const grid = document.createElement('div');
-  grid.className = 'kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols = S;
 
-  const head = document.createElement('div'); head.className='kgrid'; head.style.setProperty('--cols', S);
-  head.dataset.cols = S; head.style.marginBottom='8px';
-  head.appendChild(Object.assign(document.createElement('div'),{textContent:'Gün / Saat'}));
+  // Başlık satırı
+  const head = document.createElement('div'); head.className='kgrid'; head.style.setProperty('--cols', S); head.dataset.cols = S;
+  head.appendChild(Object.assign(document.createElement('div'),{textContent:'Gün / Saat',style:'font-weight:800'}));
   for(let s=0;s<S;s++) head.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
   wrap.appendChild(head);
 
+  // Gün satırları
   days.forEach((d,di)=>{
     const row = document.createElement('div');
     row.className = 'kgrid'; row.style.setProperty('--cols', S); row.dataset.cols = S;
@@ -471,102 +473,114 @@ function buildProgramGrid(fromRestore=false){
     }
     wrap.appendChild(row);
   });
+
+  // Program değiştiyse: müsaitlik matrislerini yeni boyuta uyarla, taşan atamaları buda
+  reconcileAllToProgram();
 }
-const exportProgram = ()=>download('ders-programi.json', state.program);
-const importProgram = obj=>{
-  if(!obj || !Array.isArray(obj.days) || typeof obj.slots!=='number') return alert('Geçersiz program JSON.');
-  state.program = obj; $("#daysInput").value = obj.days.join(','); $("#slotsInput").value = obj.slots;
-  buildProgramGrid(true);
-};
+
+/* Programla uyumlulaştırma (kritik düzeltme) */
+function reconcileAllToProgram(){
+  const D = state.program.days.length, S = state.program.slots;
+
+  // Öğretmenler
+  state.teachers.forEach(t=>{
+    const cur = state.availability.teachers[t.id] || [];
+    const next = Array.from({length:D},(_,d)=>Array.from({length:S},(_,s)=> (cur[d]?.[s] ?? true)));
+    state.availability.teachers[t.id] = next;
+  });
+
+  // Gruplar
+  Object.values(state.groups).forEach(g=>{
+    const cur = state.availability.groups[g.id] || [];
+    const next = Array.from({length:D},(_,d)=>Array.from({length:S},(_,s)=> (cur[d]?.[s] ?? true)));
+    state.availability.groups[g.id] = next;
+  });
+
+  // Taşan atamaları sil
+  state.assignments = state.assignments.filter(a=> a.day<D && a.slot<S);
+}
 
 /* ===== 3) Müsaitlik ===== */
-function ensureAvailMaps(){
-  const D = state.program.days.length, S = state.program.slots;
-  state.teachers.forEach(t=>{
-    state.availability.teachers[t.id] = state.availability.teachers[t.id] || Array.from({length:D},()=>Array(S).fill(true));
-  });
-  Object.values(state.groups).forEach(g=>{
-    state.availability.groups[g.id] = state.availability.groups[g.id] || Array.from({length:D},()=>Array(S).fill(true));
-  });
-}
-function teacherBulkSet(tid, val){
-  const D=state.program.days.length, S=state.program.slots;
-  for(let d=0; d<D; d++) for(let s=0; s<S; s++) state.availability.teachers[tid][d][s]=val;
-}
-function teacherBulkToggle(tid){
-  const D=state.program.days.length, S=state.program.slots;
-  for(let d=0; d<D; d++) for(let s=0; s<S; s++) state.availability.teachers[tid][d][s]=!state.availability.teachers[tid][d][s];
-}
 function renderAvailGrids(){
-  ensureAvailMaps();
   const D=state.program.days.length, S=state.program.slots, days=state.program.days;
-  const tWrap=$("#teacherAvailWrap"); tWrap.innerHTML='';
-  state.teachers.forEach(t=>{
-    const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
-    const head = document.createElement('div'); head.className='flex';
-    head.innerHTML = `<b>${t.name}</b><span class="tag">${t.branch}</span>`;
-    const right = document.createElement('div'); right.className='right flex';
-    const b1=document.createElement('button'); b1.className='btn sm ghost'; b1.textContent='Tümünü Uygun';
-    const b2=document.createElement('button'); b2.className='btn sm ghost'; b2.textContent='Tümünü Değil';
-    const b3=document.createElement('button'); b3.className='btn sm ghost'; b3.textContent='Tersine Çevir';
-    b1.onclick=()=>{ teacherBulkSet(t.id,true); renderAvailGrids(); };
-    b2.onclick=()=>{ teacherBulkSet(t.id,false); renderAvailGrids(); };
-    b3.onclick=()=>{ teacherBulkToggle(t.id); renderAvailGrids(); };
-    right.append(b1,b2,b3); head.appendChild(right); card.appendChild(head);
 
-    const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
-    const headRow = document.createElement('div'); headRow.textContent='Gün / Saat'; grid.appendChild(headRow);
-    for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
-    for(let d=0; d<D; d++){
-      const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
-      row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
-      for(let s=0;s<S;s++){
-        const cell = document.createElement('div'); cell.className='kcell ' + (state.availability.teachers[t.id][d][s]?'ok':'bad');
-        cell.textContent = state.availability.teachers[t.id][d][s]?'Uygun':'Değil';
-        cell.onclick = ()=>{
-          const cur = state.availability.teachers[t.id][d][s];
-          state.availability.teachers[t.id][d][s] = !cur;
-          cell.className='kcell ' + (!cur?'ok':'bad');
-          cell.textContent = !cur ? 'Uygun' : 'Değil';
-        };
-        row.appendChild(cell);
+  const tWrap=$("#teacherAvailWrap"); tWrap.innerHTML='';
+  if(state.teachers.length===0){
+    tWrap.innerHTML = '<div class="muted">Öğretmen verisi yok. Lütfen "Verileri Oku" ile yükleyin.</div>';
+  }else{
+    state.teachers.forEach(t=>{
+      const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
+      const head = document.createElement('div'); head.className='flex';
+      head.innerHTML = `<b>${t.name}</b><span class="tag">${t.branch}</span>`;
+      const right = document.createElement('div'); right.className='right flex';
+      const b1=document.createElement('button'); b1.className='btn sm ghost'; b1.textContent='Tümünü Uygun';
+      const b2=document.createElement('button'); b2.className='btn sm ghost'; b2.textContent='Tümünü Değil';
+      const b3=document.createElement('button'); b3.className='btn sm ghost'; b3.textContent='Tersine Çevir';
+      b1.onclick=()=>{ bulkSet(state.availability.teachers[t.id], true); renderAvailGrids(); };
+      b2.onclick=()=>{ bulkSet(state.availability.teachers[t.id], false); renderAvailGrids(); };
+      b3.onclick=()=>{ bulkToggle(state.availability.teachers[t.id]); renderAvailGrids(); };
+      right.append(b1,b2,b3); head.appendChild(right); card.appendChild(head);
+
+      const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
+      const headRow = document.createElement('div'); headRow.textContent='Gün / Saat'; headRow.style.fontWeight='700'; grid.appendChild(headRow);
+      for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+      for(let d=0; d<D; d++){
+        const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
+        row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
+        for(let s=0;s<S;s++){
+          const val = state.availability.teachers[t.id][d][s];
+          const cell = document.createElement('div'); cell.className='kcell ' + (val?'ok':'bad');
+          cell.textContent = val?'Uygun':'Değil';
+          cell.onclick = ()=>{
+            const cur = state.availability.teachers[t.id][d][s] = !state.availability.teachers[t.id][d][s];
+            cell.className='kcell ' + (cur?'ok':'bad');
+            cell.textContent = cur ? 'Uygun' : 'Değil';
+          };
+          row.appendChild(cell);
+        }
+        grid.appendChild(row);
       }
-      grid.appendChild(row);
-    }
-    card.appendChild(grid); tWrap.appendChild(card);
-  });
+      card.appendChild(grid); tWrap.appendChild(card);
+    });
+  }
 
   const gWrap=$("#groupAvailWrap"); gWrap.innerHTML='';
-  Object.values(state.groups).forEach(g=>{
-    const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
-    card.innerHTML = `<div class="flex"><b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span></div>`;
-    const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
-    const head = document.createElement('div'); head.textContent='Gün / Saat'; grid.appendChild(head);
-    for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
-    for(let d=0; d<D; d++){
-      const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
-      row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
-      for(let s=0;s<S;s++){
-        const cell = document.createElement('div'); cell.className='kcell ' + (state.availability.groups[g.id][d][s]?'ok':'bad');
-        cell.textContent = state.availability.groups[g.id][d][s]?'Uygun':'Değil';
-        cell.onclick = ()=>{
-          const cur = state.availability.groups[g.id][d][s];
-          state.availability.groups[g.id][d][s] = !cur;
-          cell.className='kcell ' + (!cur?'ok':'bad');
-          cell.textContent = !cur ? 'Uygun' : 'Değil';
-        };
-        row.appendChild(cell);
+  const groups = Object.values(state.groups);
+  if(groups.length===0){
+    gWrap.innerHTML = '<div class="muted">Grup verisi yok. Öğrencilerden gruplar türetilir.</div>';
+  }else{
+    groups.forEach(g=>{
+      const card = document.createElement('div'); card.className='card'; card.style.margin='8px 0';
+      card.innerHTML = `<div class="flex"><b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span></div>`;
+      const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
+      const head = document.createElement('div'); head.textContent='Gün / Saat'; head.style.fontWeight='700'; grid.appendChild(head);
+      for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+      for(let d=0; d<D; d++){
+        const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
+        row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
+        for(let s=0;s<S;s++){
+          const val = state.availability.groups[g.id][d][s];
+          const cell = document.createElement('div'); cell.className='kcell ' + (val?'ok':'bad');
+          cell.textContent = val?'Uygun':'Değil';
+          cell.onclick = ()=>{
+            const cur = state.availability.groups[g.id][d][s] = !state.availability.groups[g.id][d][s];
+            cell.className='kcell ' + (cur?'ok':'bad');
+            cell.textContent = cur ? 'Uygun' : 'Değil';
+          };
+          row.appendChild(cell);
+        }
+        grid.appendChild(row);
       }
-      grid.appendChild(row);
-    }
-    card.appendChild(grid); gWrap.appendChild(card);
-  });
+      card.appendChild(grid); gWrap.appendChild(card);
+    });
+  }
 }
-const exportAvail = ()=>download('musaitlikler.json', state.availability);
-const importAvail = obj=>{
-  if(!obj || !obj.teachers || !obj.groups) return alert('Geçersiz müsaitlik JSON.');
-  state.availability = obj; renderAvailGrids();
-};
+function bulkSet(matrix, val){
+  for(let d=0; d<matrix.length; d++) for(let s=0; s<matrix[d].length; s++) matrix[d][s]=val;
+}
+function bulkToggle(matrix){
+  for(let d=0; d<matrix.length; d++) for(let s=0; s<matrix[d].length; s++) matrix[d][s]=!matrix[d][s];
+}
 
 /* ===== 4) Talepler ===== */
 function ensureRequests(){
@@ -593,13 +607,12 @@ function renderRequests(){
   const wrap = $("#reqWrap"); wrap.innerHTML='';
 
   if(!selVal){
-    const info = document.createElement('div'); info.className='notice';
-    info.textContent = "Lütfen üstteki menüden bir grup seçin. Seçilen gruba ait branş talep girişleri burada görünecek.";
-    wrap.appendChild(info); return;
+    wrap.innerHTML = '<div class="muted">Üstten bir grup seçin. Seçilen gruba ait branş talep girişleri burada görünür.</div>';
+    return;
   }
 
   const g = state.groups[selVal];
-  if(!g){ wrap.innerHTML='<div class="notice">Seçilen grup bulunamadı.</div>'; return; }
+  if(!g){ wrap.innerHTML='<div class="muted">Seçilen grup bulunamadı.</div>'; return; }
 
   const card = document.createElement('div'); card.className='card';
   const head = document.createElement('div'); head.className='flex';
@@ -610,7 +623,7 @@ function renderRequests(){
   state.branches.forEach(b=>{
     const lab = document.createElement('label');
     lab.innerHTML = `${b}<br/><input type="number" min="0" value="${state.requests[g.id][b]||0}" />`;
-    lab.querySelector('input').oninput = (e)=>{ state.requests[g.id][b] = parseInt(e.target.value||"0"); };
+    lab.querySelector('input').oninput = (e)=>{ state.requests[g.id][b] = clamp(parseInt(e.target.value||"0"),0,99); };
     grid.appendChild(lab);
   });
   card.appendChild(grid);
@@ -642,8 +655,9 @@ function renderAssignCards(){
     card.appendChild(head);
 
     const grid = document.createElement('div'); grid.className='kgrid'; grid.style.setProperty('--cols', S); grid.dataset.cols=S;
-    const headRow = document.createElement('div'); headRow.textContent='Gün / Saat'; grid.appendChild(headRow);
+    const headRow = document.createElement('div'); headRow.textContent='Gün / Saat'; headRow.style.fontWeight='700'; grid.appendChild(headRow);
     for(let s=0;s<S;s++) grid.appendChild(Object.assign(document.createElement('div'),{className:'kcell busy',textContent:String(s+1)}));
+
     for(let d=0; d<days.length; d++){
       const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
       row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
@@ -727,7 +741,6 @@ function autoAssign(){
           const idx=g.need.indexOf(b); if(idx>-1) g.need.splice(idx,1);
           placed=true; break;
         }
-        if(!placed) {/* boş */}
       }
     }
   }
@@ -735,28 +748,42 @@ function autoAssign(){
 }
 const exportAssgn = ()=>download('atamalar.json', state.assignments);
 const importAssgn = obj=>{
-  if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.'); state.assignments = obj; renderAssignCards();
+  if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.');
+  state.assignments = obj; renderAssignCards();
 };
 
 /* ===== 6) Yazdır ===== */
 function hasAnyAssignments(){ return state.assignments && state.assignments.length>0; }
+function refreshPrintFilters(){
+  const mode = $("#printMode").value;
+  const sel = $("#printFilter"); sel.innerHTML='';
+  if(mode==='group'){
+    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Gruplar)'; sel.appendChild(opt0);
+    Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
+      const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
+    });
+  }else{
+    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Öğretmenler)'; sel.appendChild(opt0);
+    state.teachers.forEach(t=>{
+      const opt=document.createElement('option'); opt.value=t.id; opt.textContent=`${t.name} — ${t.branch}`; sel.appendChild(opt);
+    });
+  }
+}
 function renderPrintPreview(){
   const div = $("#printPreview"); div.innerHTML='';
   const mode = $("#printMode").value;
   const filter = $("#printFilter").value;
 
   if(!hasAnyAssignments()){
-    const warn = document.createElement('div'); warn.className='notice';
-    warn.textContent = "Atama bulunmuyor. Lütfen önce atama yapın.";
-    div.appendChild(warn); $("#btnPrint").disabled = true; return;
+    div.innerHTML = '<div class="muted">Atama yok. Önce atama yapın.</div>';
+    $("#btnPrint").disabled = true; return;
   }
   $("#btnPrint").disabled = false;
 
   const hdr = document.createElement('div'); hdr.className='print-header';
   hdr.innerHTML = '<h2>Fenomen Çocuk Kulübü — Grup Ders Planı</h2>'; div.appendChild(hdr);
   const sub = document.createElement('div'); sub.className='print-sub';
-  sub.textContent = (mode==='group' ? `Grup: ${filter||'Seçilmedi (tümü)'}`
-                                    : `Öğretmen: ${filter||'Seçilmedi (tümü)'}`);
+  sub.textContent = (mode==='group' ? `Grup: ${filter||'Tümü'}` : `Öğretmen: ${filter||'Tümü'}`);
   div.appendChild(sub);
 
   const days = state.program.days, S=state.program.slots;
@@ -766,8 +793,6 @@ function renderPrintPreview(){
       .filter(Boolean)
       .filter(g=>state.assignments.some(a=>a.group===g.id))
       .sort((a,b)=>a.name.localeCompare(b.name));
-    if(groups.length===0){ const n=document.createElement('div'); n.className='notice'; n.textContent="Seçime göre ataması olan grup yok."; div.appendChild(n); return; }
-
     groups.forEach(g=>{
       const page=document.createElement('div'); page.className='print-page';
       const wr = document.createElement('div'); wr.className='print-wrapper avoid-break';
@@ -801,8 +826,6 @@ function renderPrintPreview(){
     const teachers = (filter ? [state.teachers.find(t=>t.id===filter)] : state.teachers)
       .filter(Boolean)
       .filter(t=>state.assignments.some(a=>a.teacherId===t.id));
-    if(teachers.length===0){ const n=document.createElement('div'); n.className='notice'; n.textContent="Seçime göre ataması olan öğretmen yok."; div.appendChild(n); return; }
-
     teachers.forEach(t=>{
       const page=document.createElement('div'); page.className='print-page';
       const wr = document.createElement('div'); wr.className='print-wrapper avoid-break';
@@ -821,19 +844,7 @@ function renderPrintPreview(){
       }
       tTbl.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`; wr.appendChild(tTbl);
 
-      const listTbl = document.createElement('table'); listTbl.className='print-table tight avoid-break';
-      const teacherAss = state.assignments.filter(a=>a.teacherId===t.id)
-                         .sort((a,b)=>a.day===b.day ? a.slot-b.slot : a.day-b.day);
-      listTbl.innerHTML = `<thead><tr><th colspan="4">Atama Özeti</th></tr>
-                           <tr><th>Gün</th><th>Saat</th><th>Branş</th><th>Grup</th></tr></thead>
-                           <tbody>${teacherAss.map(a=>`<tr>
-                             <td>${state.program.days[a.day]}</td>
-                             <td>${a.slot+1}</td>
-                             <td>${a.branch}</td>
-                             <td>${state.groups[a.group]?.name||a.group}</td></tr>`).join('')}</tbody>`;
-      wr.appendChild(listTbl);
-
-      const groupsTouched = Array.from(new Set(teacherAss.map(a=>a.group)));
+      const groupsTouched = Array.from(new Set(state.assignments.filter(a=>a.teacherId===t.id).map(a=>a.group)));
       groupsTouched.forEach(gid=>{
         const g = state.groups[gid];
         const sTbl = document.createElement('table'); sTbl.className='print-table tight avoid-break';
@@ -854,21 +865,6 @@ function renderPrintPreview(){
     });
   }
 }
-function refreshPrintFilters(){
-  const mode = $("#printMode").value;
-  const sel = $("#printFilter"); sel.innerHTML='';
-  if(mode==='group'){
-    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Gruplar)'; sel.appendChild(opt0);
-    Object.values(state.groups).sort((a,b)=>a.name.localeCompare(b.name)).forEach(g=>{
-      const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
-    });
-  }else{
-    const opt0 = document.createElement('option'); opt0.value=''; opt0.textContent='(Tüm Öğretmenler)'; sel.appendChild(opt0);
-    state.teachers.forEach(t=>{
-      const opt=document.createElement('option'); opt.value=t.id; opt.textContent=`${t.name} — ${t.branch}`; sel.appendChild(opt);
-    });
-  }
-}
 
 /* ===== Olaylar ===== */
 $("#btnFetch").onclick = fetchAll;
@@ -876,23 +872,34 @@ $("#btnClear").onclick = ()=>{
   state.teachers=[]; state.students=[]; state.groups={}; state.branches=[];
   renderTeachers(); renderStudents(); renderGroupSummary();
   $("#readStatus").textContent='Temizlendi.';
+  reconcileAllToProgram(); // boşaltınca matrisleri de temizle
 };
 
-$("#btnBuildGrid").onclick = buildProgramGrid;
+$("#btnBuildGrid").onclick = ()=> buildProgramGrid(false);
 $("#btnProgExport").onclick = ()=>download('ders-programi.json', state.program);
-$("#btnProgImport").onclick = ()=>openFile($("#fileProgImport"), importProgram);
+$("#btnProgImport").onclick = ()=>openFile($("#fileProgImport"), obj=>{
+  if(!obj || !Array.isArray(obj.days) || typeof obj.slots!=='number') return alert('Geçersiz program JSON.');
+  state.program = obj; $("#daysInput").value = obj.days.join(','); $("#slotsInput").value = obj.slots;
+  buildProgramGrid(true);
+});
 
 $("#btnAvailExport").onclick = ()=>download('musaitlikler.json', state.availability);
-$("#btnAvailImport").onclick = ()=>openFile($("#fileAvailImport"), importAvail);
-$("#btnAvailClear").onclick = ()=>{ state.availability={teachers:{},groups:{}}; renderAvailGrids(); };
+$("#btnAvailImport").onclick = ()=>openFile($("#fileAvailImport"), obj=>{
+  if(!obj || !obj.teachers || !obj.groups) return alert('Geçersiz müsaitlik JSON.');
+  state.availability = obj; reconcileAllToProgram(); renderAvailGrids();
+});
+$("#btnAvailClear").onclick = ()=>{ state.availability={teachers:{},groups:{}}; reconcileAllToProgram(); renderAvailGrids(); };
 $("#btnAvailExport2").onclick = ()=>download('musaitlikler.json', state.availability);
-$("#btnAvailImport2").onclick = ()=>openFile($("#fileAvailImport2"), importAvail);
+$("#btnAvailImport2").onclick = ()=>openFile($("#fileAvailImport2"), obj=>{
+  if(!obj || !obj.teachers || !obj.groups) return alert('Geçersiz müsaitlik JSON.');
+  state.availability = obj; reconcileAllToProgram(); renderAvailGrids();
+});
 
-$("#goto2").onclick = ()=>{ showTopTab('step2'); };
-$("#goto3").onclick = ()=>{ ensureAvailMaps(); renderAvailGrids(); showTopTab('step3'); };
-$("#goto4").onclick = ()=>{ refreshReqFilterOptions(); renderRequests(); showTopTab('step4'); };
-$("#goto5").onclick = ()=>{ renderAssignCards(); showTopTab('step5'); };
-$("#goto6").onclick = ()=>{ refreshPrintFilters(); renderPrintPreview(); showTopTab('step6'); };
+$("#goto2").onclick = ()=> showTopTab('step2');
+$("#goto3").onclick = ()=> showTopTab('step3');
+$("#goto4").onclick = ()=> showTopTab('step4');
+$("#goto5").onclick = ()=> showTopTab('step5');
+$("#goto6").onclick = ()=> showTopTab('step6');
 
 $("#btnReqExport").onclick = exportReq;
 $("#btnReqImport").onclick = ()=>openFile($("#fileReqImport"), importReq);
@@ -904,27 +911,24 @@ $("#btnAssgnExport").onclick = exportAssgn;
 $("#btnAssgnImport").onclick = ()=>openFile($("#fileAssgnImport"), importAssgn);
 $("#btnAssgnClear").onclick = ()=>{ state.assignments=[]; renderAssignCards(); };
 
-$("#printMode").onchange = ()=>{ refreshPrintFilters(); };
+$("#printMode").onchange = ()=> refreshPrintFilters();
 $("#btnRenderPrint").onclick = renderPrintPreview;
 
-$("#btnSaveAll").onclick = ()=>{ localStorage.setItem('fenomen_v2_tabs', JSON.stringify(state)); alert('Yerel olarak kaydedildi.'); };
+$("#btnSaveAll").onclick = ()=>{ localStorage.setItem('fenomen_tabs_fix', JSON.stringify(state)); alert('Yerel olarak kaydedildi.'); };
 $("#btnLoadAll").onclick = ()=>{
-  const raw = localStorage.getItem('fenomen_v2_tabs') || localStorage.getItem('fenomen_v2') || localStorage.getItem('fenomen_v1');
+  const raw = localStorage.getItem('fenomen_tabs_fix') || localStorage.getItem('fenomen_v2_tabs') || localStorage.getItem('fenomen_v2') || localStorage.getItem('fenomen_v1');
   if(!raw) return alert('Kayıt bulunamadı.');
-  const obj = JSON.parse(raw);
-  Object.assign(state, obj);
+  Object.assign(state, JSON.parse(raw));
   renderTeachers(); renderStudents(); renderGroupSummary();
   $("#daysInput").value = state.program.days.join(','); $("#slotsInput").value = state.program.slots;
   buildProgramGrid(true);
-  ensureAvailMaps(); renderAvailGrids();
-  refreshReqFilterOptions(); renderRequests();
-  renderAssignCards();
-  refreshPrintFilters();
+  reconcileAllToProgram();
+  showTopTab('step1');
   alert('Yüklendi.');
 };
 
 /* Alt sekmeler (Müsaitlik) */
-function showAvailTab(which){ // 'teach' | 'group'
+function showAvailTab(which){
   const teachActive = which==='teach';
   $("#panelTeach").toggleAttribute('hidden', !teachActive);
   $("#panelGroup").toggleAttribute('hidden', teachActive);
@@ -936,9 +940,8 @@ $("#tabGroup").addEventListener('click', ()=>showAvailTab('group'));
 
 /* Başlangıç */
 bindTopTabs();
-buildProgramGrid(); // iskelet
-refreshPrintFilters();
-showTopTab('step1'); // sadece ilk sekme açık
+buildProgramGrid(true); // ilk iskelet
+showTopTab('step1');    // yalnız ilk sekme açık
 </script>
 </body>
 </html>
