@@ -1218,43 +1218,230 @@ $("#dlgOk").onclick = ()=>{
   state.assignments.push({group, day, slot, branch, teacherId});
   dlg.close(); renderAssignCards();
 };
-function autoAssign(){
-  const D = state.program.days.length, S = state.program.slots;
-  const load = {}; state.branches.forEach(b=>{ load[b]={}; findTeacherOptions(b).forEach(t=>load[b][t.id]=0); });
-  state.assignments.forEach(a=>{ if(load[a.branch] && load[a.branch][a.teacherId]!=null) load[a.branch][a.teacherId]++; });
-  const groups = Object.values(state.groups).map(g=>{
-    const need=[]; const req=state.requests[g.id]||{};
-    Object.entries(req).forEach(([b,c])=>{ for(let i=0;i<c;i++) need.push(b); });
-    return {id:g.id, need};
-  });
+// index.html — Auto Assign (V4.1): Maks Yerleşim Odaklı, Yük Dengesi YOK
 
-  for(let d=0; d<D; d++){
-    for(let s=0; s<S; s++){
-      for(const g of groups){
-        if(g.need.length===0) continue;
-        if(state.availability.groups[g.id]?.[d]?.[s]!==true) continue;
-        if(isGroupBusy(g.id, d, s)) continue;
-        const prev = prevGroupSubject(g.id, d, s);
-        const uniq = Array.from(new Set(g.need));
-        const tryBranches = [...uniq.filter(b=>b!==prev), ...uniq.filter(b=>b===prev)];
-        for(const b of tryBranches){
-          const teachers = findTeacherOptions(b).filter(t=>{
-            return state.availability.teachers[t.id]?.[d]?.[s]===true && !isTeacherBusy(t.id, d, s);
-          });
-          if(teachers.length===0) continue;
-          teachers.sort((a,b2)=>(load[b][a.id]??0)-(load[b][b2.id]??0));
-          const tPick=teachers[0];
-          state.assignments = state.assignments.filter(a=>!(a.group===g.id && a.day===d && a.slot===s));
-          state.assignments.push({group:g.id, day:d, slot:s, branch:b, teacherId:tPick.id});
-          load[b][tPick.id] = (load[b][tPick.id]||0)+1;
-          const idx=g.need.indexOf(b); if(idx>-1) g.need.splice(idx,1);
-          break;
+/**
+ * Amaç: Öğretmen yük dengesini tamamen devre dışı bırakarak,
+ * mümkün olan EN ÇOK derse atama yapan varyasyonu bulup uygulamak.
+ */
+function autoAssign() {
+  const D = state.program.days.length;
+  const S = state.program.slots;
+
+  // --------- Ayarlar ---------
+  const TIME_LIMIT_MS = 2500;           // UI koruması
+  const AVOID_SAME_BRANCH_SOFT = true;  // ardışık aynı branştan kaçınmaya çalış (gerekirse izin ver)
+  // ---------------------------
+
+  // Sabit atamalar (korunur)
+  const fixed = state.assignments.map(a => ({...a}));
+
+  // Hızlı erişim ızgaraları (yalnız sabitler)
+  const makeGrid = (rows, cols, fill=null) => Array.from({length:rows}, () => Array(cols).fill(fill));
+  const gGridBase = {}; // [gid][d][s] = a
+  const tGridBase = {}; // [tid][d][s] = a
+  const ensure = (mat, id, rows, cols) => (mat[id] ||= makeGrid(rows, cols));
+  const placeBase = a => {
+    ensure(gGridBase, a.group, D, S)[a.day][a.slot] = a;
+    ensure(tGridBase, a.teacherId, D, S)[a.day][a.slot] = a;
+  };
+  fixed.forEach(placeBase);
+
+  // İhtiyaç listeleri (group -> [branch, ...])
+  const needsByGroup = {};
+  for (const g of Object.values(state.groups)) {
+    const req = state.requests[g.id] || {};
+    const have = {};
+    fixed.forEach(a => { if (a.group === g.id) have[a.branch] = (have[a.branch]||0) + 1; });
+    const list = [];
+    for (const [b, cnt] of Object.entries(req)) {
+      const need = Math.max(0, (cnt|0) - (have[b]||0));
+      for (let i=0;i<need;i++) list.push(b);
+    }
+    needsByGroup[g.id] = list;
+  }
+
+  // Eğer ihtiyaç yoksa sadece ekrana yazdırıp çık
+  const remainingNeedsCount = Object.values(needsByGroup).reduce((acc, arr) => acc + (arr?.length || 0), 0);
+  if (remainingNeedsCount === 0) { renderAssignCards(); return; }
+
+  // Deneme sayısı (ihtiyaca göre dinamik)
+  const BASE_RESTARTS = 80;
+  const RESTARTS_PER_NEED = 6;
+  const MAX_RESTARTS = 1000;
+  const TARGET_RESTARTS = Math.min(MAX_RESTARTS, BASE_RESTARTS + remainingNeedsCount * RESTARTS_PER_NEED);
+
+  // Yardımcılar
+  const keyCell = (g,d,s) => `${g}|${d}|${s}`;
+  const rndInt = (n) => Math.floor(Math.random()*n);
+  const shuffle = (arr) => { for (let i=arr.length-1;i>0;i--){ const j=rndInt(i+1); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; };
+
+  const orderings = {
+    randomAll(D,S) {
+      const cells = [];
+      for (let d=0; d<D; d++) for (let s=0; s<S; s++) cells.push([d,s]);
+      return shuffle(cells);
+    },
+    dayMajorRandom(D,S) {
+      const days = shuffle([...Array(D).keys()]);
+      const slots = shuffle([...Array(S).keys()]);
+      const cells = [];
+      for (const d of days) for (const s of slots) cells.push([d,s]);
+      return cells;
+    },
+    slotMajorRandom(D,S) {
+      const days = shuffle([...Array(D).keys()]);
+      const slots = shuffle([...Array(S).keys()]);
+      const cells = [];
+      for (const s of slots) for (const d of days) cells.push([d,s]);
+      return cells;
+    },
+    serpentine(D,S) {
+      const days = shuffle([...Array(D).keys()]);
+      const cells = [];
+      for (let i=0;i<days.length;i++){
+        const d = days[i];
+        if (i%2===0) for (let s=0;s<S;s++) cells.push([d,s]);
+        else for (let s=S-1;s>=0;s--) cells.push([d,s]);
+      }
+      return cells;
+    }
+  };
+  const orderingKeys = Object.keys(orderings);
+
+  const prevBranchOf = (gGrid, gid, d, s) => {
+    if (s > 0) return gGrid[gid]?.[d]?.[s-1]?.branch || null;
+    if (d > 0) return gGrid[gid]?.[d-1]?.[S-1]?.branch || null;
+    return null;
+  };
+
+  const canUse = (gGrid, tGrid, gid, tid, d, s) => {
+    if (state.availability.groups[gid]?.[d]?.[s] !== true) return false;
+    if (state.availability.teachers[tid]?.[d]?.[s] !== true) return false;
+    if (gGrid[gid]?.[d]?.[s]) return false;
+    if (tGrid[tid]?.[d]?.[s]) return false;
+    return true;
+  };
+
+  // Çoklu denemeler
+  const startTime = performance.now();
+  const groupsAll = Object.values(state.groups).map(x => x.id);
+
+  let bestScore = -1;
+  let bestSolution = null;
+  let restartsDone = 0;
+
+  while (restartsDone < TARGET_RESTARTS && (performance.now() - startTime) < TIME_LIMIT_MS) {
+    restartsDone++;
+
+    // Scratch kopyaları
+    const gGrid = {};
+    const tGrid = {};
+    for (const gid of Object.keys(gGridBase)) gGrid[gid] = gGridBase[gid].map(row => row.slice());
+    for (const tid of Object.keys(tGridBase)) tGrid[tid] = tGridBase[tid].map(row => row.slice());
+    const needs = JSON.parse(JSON.stringify(needsByGroup));
+
+    // Hücre gezme sırası ve grup sırası
+    const pattern = orderingKeys[rndInt(orderingKeys.length)];
+    const cells = orderings[pattern](D, S);
+
+    const groupOrder = groupsAll
+      .map(gid => ({ gid, need: needs[gid]?.length || 0 }))
+      .sort((a,b) => a.need - b.need || (Math.random()-0.5))
+      .map(x => x.gid);
+
+    let placedCount = 0;
+
+    for (const [d,s] of cells) {
+      const localGroups = groupOrder.slice();
+      if (Math.random() < 0.5) shuffle(localGroups); // varyasyon
+
+      for (const gid of localGroups) {
+        const needArr = needs[gid];
+        if (!needArr || needArr.length === 0) continue;
+        if (state.availability.groups[gid]?.[d]?.[s] !== true) continue;
+        if (gGrid[gid]?.[d]?.[s]) continue;
+
+        // Branş seçimi: ardışık aynı branştan kaçın (soft), yoksa rastgele
+        const lastB = AVOID_SAME_BRANCH_SOFT ? prevBranchOf(gGrid, gid, d, s) : null;
+        const uniqBranches = Array.from(new Set(needArr));
+        shuffle(uniqBranches);
+        if (lastB) {
+          const ix = uniqBranches.indexOf(lastB);
+          if (ix > -1) { uniqBranches.splice(ix,1); uniqBranches.push(lastB); }
+        }
+
+        let placedHere = false;
+
+        for (const branch of uniqBranches) {
+          // Uygun öğretmen adayları
+          const candidates = findTeacherOptions(branch)
+            .filter(t => state.availability.teachers[t.id]?.[d]?.[s] === true && !(tGrid[t.id]||[])[d]?.[s]);
+
+          if (candidates.length === 0) continue;
+
+          // YÜK DENGESİ YOK: tamamen rastgele seçim (sadece uygunluk/çakışma kontrolü)
+          shuffle(candidates);
+
+          for (const t of candidates) {
+            if (!canUse(gGrid, tGrid, gid, t.id, d, s)) continue;
+
+            // Yerleştir
+            const a = { group: gid, day: d, slot: s, branch, teacherId: t.id };
+            (gGrid[gid] ||= makeGrid(D,S))[d][s] = a;
+            (tGrid[t.id] ||= makeGrid(D,S))[d][s] = a;
+
+            // Bu branştan bir ihtiyacı düş
+            const idx = needArr.indexOf(branch);
+            if (idx > -1) needArr.splice(idx, 1);
+
+            placedCount++;
+            placedHere = true;
+            break;
+          }
+          if (placedHere) break;
+        }
+      }
+
+      if ((performance.now() - startTime) >= TIME_LIMIT_MS) break; // süre koruması
+    }
+
+    // Çözümü derle
+    const solution = [];
+    for (const a of fixed) solution.push({...a});
+    for (const gid of Object.keys(gGrid)) {
+      for (let d=0; d<D; d++) {
+        for (let s=0; s<S; s++) {
+          const a = gGrid[gid][d][s];
+          if (!a) continue;
+          if (!gGridBase[gid]?.[d]?.[s]) solution.push(a);
         }
       }
     }
+
+    if (placedCount > bestScore) {
+      bestScore = placedCount;
+      bestSolution = solution;
+      if (bestScore === remainingNeedsCount) break; // erken başarı
+    }
   }
+
+  // En iyi sonucu uygula
+  if (bestSolution) {
+    const seen = new Set();
+    const merged = [];
+    for (const a of bestSolution) {
+      const k = keyCell(a.group, a.day, a.slot);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      merged.push({group:a.group, day:a.day, slot:a.slot, branch:a.branch, teacherId:a.teacherId});
+    }
+    state.assignments = merged;
+  }
+
   renderAssignCards();
 }
+
 const exportAssgn = ()=>download('atamalar.json', state.assignments);
 const importAssgn = obj=>{
   if(!Array.isArray(obj)) return alert('Geçersiz atamalar JSON.');
