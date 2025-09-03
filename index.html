@@ -999,49 +999,108 @@ function refreshReqFilterOptions(){
     const opt=document.createElement('option'); opt.value=g.id; opt.textContent=g.name; sel.appendChild(opt);
   });
 }
-function totalRequestForGroup(gid){ const req = state.requests[gid]||{}; return Object.values(req).reduce((a,b)=>a+(+b||0),0); }
+function totalRequestForGroup(gid){
+  const req = state.requests[gid]||{};
+  return Object.values(req).reduce((a,b)=>a+(+b||0),0);
+}
 
 function renderRequests(){
   ensureRequests();
-  const bc = $("#branchChips"); bc.innerHTML='';
-  state.branches.forEach(b=>{ const x=document.createElement('span'); x.className='pill'; x.textContent=b; bc.appendChild(x); });
+
+  // Neden: Branş toplam/kalan rozetlerini her çizimde güncel tutmak için
+  if (typeof renderBranchChipsSummary === 'function') {
+    renderBranchChipsSummary();
+  } else {
+    // Yedek: helper yoksa en azından branş isimlerini göster
+    const bc = $("#branchChips");
+    if (bc) {
+      bc.innerHTML = '';
+      state.branches.forEach(b=>{
+        const x = document.createElement('span');
+        x.className = 'pill';
+        x.textContent = b;
+        bc.appendChild(x);
+      });
+    }
+  }
 
   const selVal = $("#reqGroupSelect").value;
-  const wrap = $("#reqWrap"); wrap.innerHTML='';
+  const wrap = $("#reqWrap");
+  wrap.innerHTML = '';
 
-  if(!selVal){ wrap.innerHTML = '<div class="muted">Soldan bir grup seçin. Seçilen gruba ait talepleri düzenleyin.</div>'; return; }
+  if(!selVal){
+    wrap.innerHTML = '<div class="muted">Soldan bir grup seçin. Seçilen gruba ait talepleri düzenleyin.</div>';
+    return;
+  }
 
-  const g = state.groups[selVal]; if(!g){ wrap.innerHTML='<div class="muted">Seçilen grup bulunamadı.</div>'; return; }
+  const g = state.groups[selVal];
+  if(!g){
+    wrap.innerHTML = '<div class="muted">Seçilen grup bulunamadı.</div>';
+    return;
+  }
 
-  const card = document.createElement('div'); card.className='card';
+  const card = document.createElement('div');
+  card.className = 'card';
 
   const total = totalRequestForGroup(g.id);
   const capacity = state.program.days.length * state.program.slots;
-  const chip = document.createElement('span'); chip.className='pill' + (total>capacity?' bad':'');
-
+  const chip = document.createElement('span');
+  chip.className = 'pill' + (total > capacity ? ' bad' : '');
   chip.textContent = `Toplam: ${total} • Kapasite: ${capacity}`;
 
-  const head = document.createElement('div'); head.className='flex';
+  const head = document.createElement('div');
+  head.className = 'flex';
   head.innerHTML = `<b>${g.name}</b><span class="tag">${g.students.length} öğrenci</span>`;
   head.appendChild(chip);
   card.appendChild(head);
 
-  const tbl = document.createElement('table'); tbl.style.borderSpacing='0 6px';
+  const tbl = document.createElement('table');
+  tbl.style.borderSpacing = '0 6px';
   tbl.innerHTML = `<thead><tr><th>Branş</th><th style="width:240px">Saat</th></tr></thead><tbody></tbody>`;
+
   state.branches.forEach(b=>{
     const tr = document.createElement('tr');
-    const td1 = document.createElement('td'); td1.textContent=b; tr.appendChild(td1);
+
+    const td1 = document.createElement('td');
+    td1.textContent = b;
+    tr.appendChild(td1);
+
     const td2 = document.createElement('td');
-    const box = document.createElement('div'); box.className='qty';
-    const minus = document.createElement('button'); minus.textContent='–';
-    const inp = document.createElement('input'); inp.type='number'; inp.min='0'; inp.value=state.requests[g.id][b]||0;
-    const plus = document.createElement('button'); plus.textContent='+';
-    minus.onclick=()=>{ inp.value=Math.max(0, (+inp.value||0)-1); inp.dispatchEvent(new Event('input')); };
-    plus.onclick=()=>{ inp.value=(+inp.value||0)+1; inp.dispatchEvent(new Event('input')); };
-    inp.oninput = (e)=>{ state.requests[g.id][b] = clamp(parseInt(e.target.value||"0"),0,999); const t=totalRequestForGroup(g.id); chip.className='pill'+(t>capacity?' bad':''); chip.textContent=`Toplam: ${t} • Kapasite: ${capacity}`; };
-    box.append(minus, inp, plus); td2.appendChild(box); tr.appendChild(td2);
+    const box = document.createElement('div'); box.className = 'qty';
+
+    const minus = document.createElement('button'); minus.textContent = '–';
+    const inp = document.createElement('input'); inp.type = 'number'; inp.min = '0'; inp.value = state.requests[g.id][b] || 0;
+    const plus = document.createElement('button'); plus.textContent = '+';
+
+    minus.onclick = ()=>{
+      inp.value = Math.max(0, (+inp.value || 0) - 1);
+      inp.dispatchEvent(new Event('input'));
+    };
+    plus.onclick  = ()=>{
+      inp.value = (+inp.value || 0) + 1;
+      inp.dispatchEvent(new Event('input'));
+    };
+
+    inp.oninput = (e)=>{
+      // Neden: istenmeyen değerleri engelle, özetleri canlı güncelle
+      state.requests[g.id][b] = clamp(parseInt(e.target.value || '0'), 0, 999);
+
+      const t = totalRequestForGroup(g.id);
+      chip.className = 'pill' + (t > capacity ? ' bad' : '');
+      chip.textContent = `Toplam: ${t} • Kapasite: ${capacity}`;
+
+      if (typeof renderBranchChipsSummary === 'function') {
+        renderBranchChipsSummary(); // branş kalan/kapasite özetlerini canlı güncelle
+      }
+    };
+
+    box.append(minus, inp, plus);
+    td2.appendChild(box);
+    tr.appendChild(td2);
+
     tbl.querySelector('tbody').appendChild(tr);
   });
+
   card.appendChild(tbl);
   wrap.appendChild(card);
 }
@@ -1553,5 +1612,58 @@ showTopTab('step1');
   }
 }
 </style>
+<script>
+  function computeBranchTeacherCapacity(){
+  const D = state.program.days.length;
+  const S = state.program.slots;
+  const caps = Object.fromEntries(state.branches.map(b => [b, 0]));
+
+  // neden: branş eşleşen her öğretmenin tüm true hücreleri ayrı kapasitedir (eşzamanlı sınıflar)
+  state.teachers.forEach(t => {
+    const b = t.branch;
+    const mat = state.availability.teachers[t.id] || [];
+    for (let d = 0; d < D; d++){
+      const row = mat[d] || [];
+      for (let s = 0; s < S; s++){
+        if (row[s] === true) caps[b] = (caps[b] || 0) + 1;
+      }
+    }
+  });
+  return caps;
+}
+
+// === Branş bazlı toplam talepler (tüm grupların toplam talebi) ===
+function computeBranchRequestsTotal(){
+  const totals = Object.fromEntries(state.branches.map(b => [b, 0]));
+  Object.values(state.requests || {}).forEach(reqByBranch => {
+    state.branches.forEach(b => {
+      totals[b] += +(reqByBranch?.[b] || 0);
+    });
+  });
+  return totals;
+}
+
+// === Başlık altı özet rozetler: {branş}: Kalan/Toplam (Kalan = Kapasite - Talep) ===
+function renderBranchChipsSummary(){
+  const host = document.getElementById('branchChips');
+  if(!host) return;
+  host.innerHTML = '';
+
+  const caps = computeBranchTeacherCapacity();
+  const reqs = computeBranchRequestsTotal();
+
+  state.branches.forEach(b => {
+    const total = caps[b] || 0;
+    const used = reqs[b] || 0;
+    const left = Math.max(0, total - used);
+
+    const chip = document.createElement('span');
+    chip.className = 'pill' + (left <= 0 && total > 0 ? ' bad' : '');
+    chip.textContent = `${b} — ${left}/${total} müsait`;
+    host.appendChild(chip);
+  });
+}
+  
+</script>
 </body>
 </html>
