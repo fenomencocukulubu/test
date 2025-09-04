@@ -2212,5 +2212,122 @@ function renderBranchChipsSummary(){
 }
   
 </script>
+<script>
+/* ==== Bağımsız: 7-8. sınıflar full liste yazdır ==== */
+(function injectPrintAllButton(){
+  const host = document.querySelector('#step6 .row.no-print');
+  if (!host || document.getElementById('btnPrintAll')) return;
+  const btn = document.createElement('button');
+  btn.id = 'btnPrintAll';
+  btn.className = 'btn warn';
+  btn.textContent = 'Tüm listeyi yazdır';
+  btn.addEventListener('click', printAll_7_8);
+  host.appendChild(btn);
+})();
+
+/**
+ * 7. ve 8. sınıfları ayrı sayfalarda, Pazartesi→Cuma ve ders slotlarıyla kompakt tabloda yazdırır.
+ * Neden: "Aynı kağıtta olmasın" talebini garanti etmek için sayfa kırımı uyguluyoruz.
+ */
+function printAll_7_8() {
+  const hasAny = Array.isArray(state.assignments) && state.assignments.length > 0;
+  if (!hasAny) { alert('Atama yok. Önce atama yapın.'); return; }
+
+  const days   = state.program?.days || ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma"];
+  const S      = +state.program?.slots || 8;
+  const labels = Array.isArray(state.program?.slotLabels) ? state.program.slotLabels : [];
+
+  const esc = s => String(s ?? '')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;')
+    .replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
+
+  const byGrade = (grade) => Object.values(state.groups || {})
+    .filter(g => (parseGroupName(g.name || g.id || '')?.grade === grade))
+    .filter(g => state.assignments.some(a => a.group === g.id))
+    .sort(groupComparator);
+
+  const w = window.open('', '_blank');
+  const css = `
+    @page { size: A4; margin: 8mm; }
+    * { box-sizing: border-box; }
+    body { font: 11px/1.25 system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, sans-serif; color:#0a0a0a; }
+    h1 { font-size: 16px; margin: 0 0 6px; text-align:center; font-weight:800; }
+    h2 { font-size: 13px; margin: 8px 0 6px; font-weight:800; border-bottom:1px solid #ddd; padding-bottom:3px; }
+    .grade-section + .grade-section { break-before: page; page-break-before: always; } /* 8. sınıf yeni sayfa */
+    .group-block { margin: 6px 0 10px; page-break-inside: avoid; }
+    .g-head { font-weight:700; margin-bottom:4px; }
+    .students { font-weight: 500; color:#374151; }
+    table { width:100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { border:1px solid #dcdcdc; padding: 2px 4px; vertical-align: top; }
+    th { background:#f3f4f6; font-weight:700; text-align:center; }
+    td.day { white-space:nowrap; font-weight:700; }
+    .mini { font-size: 10px; color:#374151; }
+    .tight th, .tight td { padding: 2px 4px; }
+    .grade-badge { display:inline-block; padding:2px 8px; border-radius:8px; background:#eef2ff; color:#1e3a8a; font-weight:800; }
+    .muted { color:#6b7280; }
+    th,td { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  `;
+
+  w.document.write(`<!DOCTYPE html><html lang="tr"><head>
+    <meta charset="utf-8">
+    <title>Fenomen Çocuk Kulübü birebir ve Grup Listesi</title>
+    <style>${css}</style>
+  </head><body>`);
+
+  w.document.write(`<h1>Fenomen Çocuk Kulübü birebir ve Grup Listesi</h1>`);
+
+  [7,8].forEach((grade, idx) => {
+    const groups = byGrade(grade);
+    if (groups.length === 0) return;
+
+    w.document.write(`<section class="grade-section">`);
+    w.document.write(`<h2><span class="grade-badge">${grade}. Sınıflar</span></h2>`);
+
+    groups.forEach(g => {
+      const aForG = state.assignments.filter(a => a.group === g.id);
+      const daysWith = Array.from(new Set(aForG.map(a => a.day))).sort((a,b)=>a-b);
+      if (daysWith.length === 0) return;
+
+      const studentNames = (state.students || [])
+        .filter(s => s.group === g.id)
+        .map(s => esc(s.name));
+
+      w.document.write(`<div class="group-block">`);
+      w.document.write(`<div class="g-head">${esc(g.name)} — <span class="students">${studentNames.join(', ') || '<span class="muted">öğrenci yok</span>'}</span></div>`);
+
+      let thead = `<tr><th style="width:90px">Gün / Saat</th>${
+        Array.from({length:S}, (_,i)=>`<th>${esc(labels[i] || (String(i+1)+'. Ders'))}</th>`).join('')
+      }</tr>`;
+
+      let body = '';
+      daysWith.forEach(d => {
+        let row = `<tr><td class="day">${esc(days[d] || '')}</td>`;
+        for (let s=0; s<S; s++) {
+          const a = aForG.find(x => x.day === d && x.slot === s);
+          if (a) {
+            const tname = state.teachers.find(t => t.id === a.teacherId)?.name || '';
+            row += `<td><div style="text-align:center"><b>${esc(a.branch)}</b><br><span class="mini">${esc(tname)}</span></div></td>`;
+          } else {
+            row += `<td></td>`;
+          }
+        }
+        row += `</tr>`;
+        body += row;
+      });
+
+      w.document.write(`<table class="tight"><thead>${thead}</thead><tbody>${body}</tbody></table>`);
+      w.document.write(`</div>`);
+    });
+
+    w.document.write(`</section>`);
+  });
+
+  w.document.write(`</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch(_){} }, 50);
+}
+</script>
+
 </body>
 </html>
