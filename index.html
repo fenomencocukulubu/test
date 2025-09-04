@@ -2328,6 +2328,359 @@ function printAll_7_8() {
   setTimeout(() => { try { w.print(); } catch(_){} }, 50);
 }
 </script>
+<!-- ==== TEACHER PRINT V2 – KOMPAKT, TEK A4 ==== -->
+<style>
+/* ===========================
+   PRINT: Öğretmen V2 (Lüks)
+   =========================== */
+
+/* Genel değişkenler; fit fonksiyonu bunları ayarlar */
+:root{
+  --tpv2-font: 11px;
+  --tpv2-pad: 4px;
+  --tpv2-gap: 8px;
+  --tpv2-ink: #0f172a;
+  --tpv2-muted: #6b7280;
+  --tpv2-gold: #b45309;      /* lüks vurgu */
+  --tpv2-gold-ink: #78350f;
+  --tpv2-grid: #0f172a;
+}
+
+.print-teacher-v2{
+  color: var(--tpv2-ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, "Helvetica Neue", "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+
+.print-teacher-v2 .page{
+  font-size: var(--tpv2-font);
+  line-height: 1.35;
+  position: relative;
+}
+
+.print-teacher-v2 .brandbar{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom: calc(var(--tpv2-gap) - 2px);
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--tpv2-gold);
+}
+.print-teacher-v2 .brandbar .org{
+  font-weight:900; letter-spacing:.2px; font-size:1.25em;
+}
+.print-teacher-v2 .brandbar .chip{
+  font-weight:800; font-size:.85em; color:var(--tpv2-gold-ink);
+  border:1px solid var(--tpv2-gold); padding:2px 8px; border-radius:999px;
+}
+
+.print-teacher-v2 .title{
+  font-weight:900; font-size: 1.4em; text-align:center; margin:0 0 calc(var(--tpv2-gap) - 2px) 0;
+}
+.print-teacher-v2 .t-meta{
+  display:flex; justify-content:center; gap:10px; font-weight:700;
+  margin-bottom: calc(var(--tpv2-gap) - 2px);
+}
+.print-teacher-v2 .muted{ color: var(--tpv2-muted) }
+
+/* Tablo temeli */
+.print-teacher-v2 table{
+  width:100%; border-collapse:collapse; table-layout:fixed;
+}
+.print-teacher-v2 th, .print-teacher-v2 td{
+  border: 1px solid var(--tpv2-grid);
+  padding: var(--tpv2-pad); vertical-align:top;
+}
+.print-teacher-v2 thead th{
+  background: #f7f7fb;
+}
+
+/* Haftalık plan */
+.print-teacher-v2 .sched th:first-child,
+.print-teacher-v2 .sched td:first-child{
+  width:92px; white-space:nowrap; font-weight:800; background:#fbfbfe;
+}
+.print-teacher-v2 .sched small{
+  display:block; font-size:.9em; color:#334155;
+}
+.print-teacher-v2 .slot-head{
+  font-weight:800; text-align:center;
+}
+
+/* Yoklama */
+.print-teacher-v2 .att-head{
+  margin: var(--tpv2-gap) 0 4px; font-weight:900; text-align:center;
+  border-top: 2px solid #e5e7eb; padding-top: 6px;
+}
+.print-teacher-v2 .att-grid{
+  display:grid; grid-template-columns: 1fr 1fr; gap: var(--tpv2-gap);
+}
+.print-teacher-v2 .att-card{
+  border:1px solid var(--tpv2-grid); border-radius:8px;
+  padding: calc(var(--tpv2-pad) - 1px);
+  break-inside: avoid; page-break-inside: avoid;
+  background: #fff;
+}
+.print-teacher-v2 .att-card .g-title{
+  font-weight:800; margin-bottom:2px;
+}
+.print-teacher-v2 .att{
+  width:100%; border-collapse:collapse;
+}
+.print-teacher-v2 .att th, .print-teacher-v2 .att td{
+  border:1px solid #e5e7eb; padding: calc(var(--tpv2-pad) - 2px);
+}
+.print-teacher-v2 .att th{ background:#f9fafb; text-align:center; }
+.print-teacher-v2 .att th:first-child, .print-teacher-v2 .att td:first-child{ text-align:left; }
+
+/* Dip bilgi */
+.print-teacher-v2 .foot{
+  display:flex; justify-content:space-between; align-items:center;
+  margin-top: 6px; color:#475569; font-size:.9em;
+}
+
+/* Baskı */
+@media print{
+  @page{ size: A4; margin: 12mm; }
+  .print-teacher-v2 .page{ break-after: page; page-break-after: always; }
+  th,td{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+}
+</style>
+
+<script>
+/* =========================================================
+   PRINT: Öğretmen V2 — Lüks Tasarım + 6 slot / sayfa kuralı
+   ========================================================= */
+
+/* ==== BUTON EKLE ==== */
+(function injectTeacherV2Btn(){
+  const host = document.querySelector('#step6 .row.no-print') || document.querySelector('#step6') || document.body;
+  if(!host || document.getElementById('btnTeacherV2')) return;
+  const btn = document.createElement('button');
+  btn.id = 'btnTeacherV2';
+  btn.className = 'btn';
+  btn.textContent = 'Öğretmene göre (Yeni Tasarım)';
+  btn.addEventListener('click', ()=> printTeachersV2());
+  host.appendChild(btn);
+})();
+
+/* ==== YARDIMCILAR ==== */
+function mmToPx(mm){
+  const el = document.createElement('div');
+  el.style.width='1mm'; el.style.position='absolute'; el.style.visibility='hidden';
+  document.body.appendChild(el);
+  const one = el.getBoundingClientRect().width || 3.78; el.remove();
+  return one * mm;
+}
+function esc(s){
+  return String(s ?? '')
+    .replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+    .replaceAll('"','&quot;').replaceAll("'","&#039;");
+}
+function getTeacherAssignmentsMap(){
+  const map = new Map();
+  (state.assignments || []).forEach(a=>{
+    if(!map.has(a.teacherId)) map.set(a.teacherId, []);
+    map.get(a.teacherId).push(a);
+  });
+  return map;
+}
+function groupBy(arr, keyFn){
+  const m = new Map();
+  arr.forEach(x=>{
+    const k = keyFn(x);
+    if(!m.has(k)) m.set(k, []);
+    m.get(k).push(x);
+  });
+  return m;
+}
+function uniq(arr){ return Array.from(new Set(arr)); }
+
+/* ==== SAYFAYI A4'E SIĞDIR ==== */
+function fitPageToA4(rootEl){
+  const A4H = 297, MARGIN = 12; // mm
+  const usableH = mmToPx(A4H - 2*MARGIN);
+
+  // Başlangıç: yükselt → gerekiyorsa kıs
+  let font = 12.5, pad = 5;
+  const MIN_F = 8, MAX_F = 13.5;
+  const apply = ()=>{
+    rootEl.style.setProperty('--tpv2-font', font+'px');
+    rootEl.style.setProperty('--tpv2-pad', pad+'px');
+    rootEl.style.setProperty('--tpv2-gap', Math.max(6, Math.round(font*0.75))+'px');
+  };
+  font = Math.min(MAX_F, font); pad = Math.max(2, Math.round(font*0.36)); apply();
+
+  if(rootEl.scrollHeight > usableH){
+    let guard = 50;
+    while(rootEl.scrollHeight > usableH && font > MIN_F && guard--){
+      font -= 0.5; pad = Math.max(1, Math.round(font*0.33)); apply();
+    }
+  }else{
+    let guard = 20;
+    while(rootEl.scrollHeight < usableH*0.96 && font < MAX_F && guard--){
+      font += 0.5; pad = Math.max(2, Math.round(font*0.36)); apply();
+      if(rootEl.scrollHeight > usableH){ font -= 0.5; pad = Math.max(1, Math.round(font*0.33)); apply(); break; }
+    }
+  }
+}
+
+/* ==== Yardım: veriler ==== */
+const getGroup = id => (state.groups || {})[id] || { id, name:id };
+const getTeacher = id => (state.teachers || []).find(t=>t.id===id) || { id, name:'-' };
+
+/* ==== HTML üreticiler ==== */
+function renderSchedTableForWindow(days, labels, byDay, S, start, end){
+  const cols = [];
+  for(let s=start; s<end; s++){
+    const lab = esc(labels?.[s] || ((s+1)+'. Ders'));
+    cols.push(`<th class="slot-head">${lab}</th>`);
+  }
+  const thead = `
+    <thead>
+      <tr>
+        <th>Gün / Saat</th>
+        ${cols.join('')}
+      </tr>
+    </thead>
+  `;
+
+  const bodyRows = days.map((dName, dIdx)=>{
+    const list = byDay.get(dIdx) || [];
+    const cells = [];
+    for(let s=start; s<end; s++){
+      const a = list.find(x=>x.slot===s);
+      if(!a){ cells.push('<td></td>'); continue; }
+      const g = getGroup(a.group);
+      const br = esc(a.branch || '');
+      const gname = esc(g.name || g.id);
+      const room = g.room ? ` • ${esc(g.room)}` : '';
+      cells.push(`<td><b>${gname}</b><small>${br}${room}</small></td>`);
+    }
+    return `<tr><td><b>${esc(dName)}</b></td>${cells.join('')}</tr>`;
+  }).join('');
+
+  return `<table class="sched">${thead}<tbody>${bodyRows}</tbody></table>`;
+}
+
+function renderAttendance(groups, ATT_HEADERS){
+  if(groups.length===0) return '';
+  const cards = groups.map(g=>{
+    const students = (state.students || []).filter(s=>s.group===g.id);
+    const rows = (students.length
+      ? students.map(st=>`
+        <tr>
+          <td>${esc(st.name || '')}</td>
+          ${ATT_HEADERS.map(()=>'<td>□</td>').join('')}
+        </tr>`).join('')
+      : `<tr><td colspan="${1+ATT_HEADERS.length}" class="muted">Öğrenci yok</td></tr>`
+    );
+    return `
+      <div class="att-card">
+        <div class="g-title">${esc(g.name || g.id)}</div>
+        <table class="att">
+          <thead>
+            <tr>
+              <th style="width:46%">Öğrenci</th>
+              ${ATT_HEADERS.map(h=>`<th>${esc(h)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="att-head">Öğrenci Yoklama</div>
+    <div class="att-grid">${cards}</div>
+  `;
+}
+
+/* ==== YENİ TASARIM: ÖĞRETMENE GÖRE YAZDIR ==== */
+function printTeachersV2(){
+  const asgByTeacher = getTeacherAssignmentsMap();
+  if(!asgByTeacher.size){
+    alert('Atama yok. Önce atama yapın.');
+    return;
+  }
+
+  const days = state.program?.days || ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma"];
+  const S = Math.min(12, +state.program?.slots || 8); // 12’ye kadar destek
+  const labels = Array.isArray(state.program?.slotLabels)
+    ? state.program.slotLabels
+    : Array.from({length:S},(_,i)=> (i+1)+'. Ders');
+
+  const ATT_HEADERS = ['Var','Yok','Geç','İzin'];
+
+  const w = window.open('', '_blank');
+  const baseCSS = Array.from(document.querySelectorAll('style')).map(s=>s.innerHTML).join('\n');
+
+  w.document.write(`<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <title>Öğretmen Yazdır (Yeni)</title>
+  <style>${baseCSS}</style>
+</head>
+<body class="print-teacher-v2">
+</body></html>`);
+
+  const addPage = (html)=> w.document.body.insertAdjacentHTML('beforeend', `<section class="page">${html}</section>`);
+
+  // === YENİ: Toplam sayfa ve global sayfa sayacı ===
+  const windowsPerTeacher = Math.max(1, Math.ceil(S / 6));              // her öğretmene düşen sayfa
+  const totalPages = asgByTeacher.size * windowsPerTeacher;              // toplam sayfa
+  let pageNo = 0;                                                        // global sayaç
+
+  asgByTeacher.forEach((asgList, tId)=>{
+    const t = getTeacher(tId);
+    const byDay = groupBy(asgList, a=>a.day);
+    const groups = uniq(asgList.map(a=>a.group)).map(getGroup);
+
+    const windows = windowsPerTeacher;
+    for(let wIx=0; wIx<windows; wIx++){
+      const start = wIx*6;
+      const end   = Math.min(start+6, S);
+
+      const head = `
+        <div class="brandbar">
+          <div class="org">Fenomen Çocuk Kulübü</div>
+          <div class="chip">${++pageNo}. Sayfa / ${totalPages}</div>
+        </div>
+        <div class="title">Öğretmen Ders Planı</div>
+        <div class="t-meta">
+          <div>${esc(t.name)}</div>
+          ${t.branch ? `<div class="muted">— ${esc(t.branch)}</div>` : ''}
+        </div>
+      `;
+
+      const sched = renderSchedTableForWindow(days, labels, byDay, S, start, end);
+
+      // Yoklama: tek sayfa ise aynı sayfada; iki sayfa ise 2. sayfada
+      const showAttendanceHere = (windows === 1) || (windows > 1 && wIx === windows-1);
+      const att = showAttendanceHere ? renderAttendance(groups, ATT_HEADERS) : '';
+
+      const foot = `
+        <div class="foot">
+          <span class="muted">Öğretmen: ${esc(t.name)}${t.branch?` • ${esc(t.branch)}`:''}</span>
+          <span class="muted">${new Date().toLocaleDateString('tr-TR')}</span>
+        </div>
+      `;
+
+      addPage(`${head}${sched}${att}${foot}`);
+    }
+  });
+
+  w.document.close();
+
+  const onReady = ()=>{
+    const pages = w.document.querySelectorAll('.print-teacher-v2 .page');
+    pages.forEach(pg=> fitPageToA4(pg));
+    try{ w.focus(); w.print(); }catch(_){}
+  };
+  if (w.document.readyState === 'complete') onReady();
+  else w.addEventListener('load', onReady);
+}
+
+</script>
+
 
 </body>
 </html>
