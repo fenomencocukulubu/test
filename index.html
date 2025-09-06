@@ -1502,7 +1502,6 @@ function autoAssign() {
       merged.push({group:a.group, day:a.day, slot:a.slot, branch:a.branch, teacherId:a.teacherId});
     }
     state.assignments = merged;
-    _postBalanceByBranch({ maxSwapsPerHeavy: 2, minGap: 1, onlyNew: true }, fixed);
   }
 
   renderAssignCards();
@@ -2681,120 +2680,7 @@ function printTeachersV2(){
 }
 
 </script>
-<script>
-/**
- * Branş bazlı hafif son-dengeli dağıtım.
- * Neden: Aşırı yük farklarını küçük, güvenli değişimlerle azaltmak.
- * Varsayılanlar: Branş başına ağır öğretmenden en fazla 2 ders taşır, min fark eşiği 1.
- * Sabit (fixedSnapshot) içerdiği hücrelere dokunmaz (manuel/sabit atamaları korumak için).
- */
-function _postBalanceByBranch(options = {}, fixedSnapshot = []) {
-  const {
-    maxSwapsPerHeavy = 2,
-    minGap = 1,
-    onlyNew = true, // sadece bu turda eklenen hücrelerde oyna
-  } = options;
 
-  const keyCell = (g, d, s) => `${g}|${d}|${s}`;
-  const asStr = v => String(v);
-
-  // Sabit hücre anahtarları (korunacak)
-  const fixedKeys = new Set(onlyNew ? fixedSnapshot.map(a => keyCell(a.group, a.day, a.slot)) : []);
-
-  // Öğretmen branş uygunluğu (çoklu veri modellerini tolere eder)
-  const teacherHasBranch = (tid, branch) => {
-    try {
-      const arr = (typeof findTeacherOptions === 'function') ? (findTeacherOptions(branch) || []) : [];
-      if (arr.some(t => asStr(t.id) === asStr(tid))) return true;
-    } catch { /* sessiz */ }
-
-    const pick = (obj) => obj?.branches ?? obj?.subjects ?? obj?.branch ?? obj?.subject;
-    const fromArray = Array.isArray(state.teachers)
-      ? state.teachers.find(x => asStr(x.id) === asStr(tid))
-      : state.teachers?.[tid];
-    const fromPeople = state.people?.teachers
-      ? (Array.isArray(state.people.teachers)
-          ? state.people.teachers.find(x => asStr(x.id) === asStr(tid))
-          : state.people.teachers[tid])
-      : null;
-
-    const cands = pick(fromArray) ?? pick(fromPeople);
-    if (Array.isArray(cands)) return cands.map(asStr).includes(asStr(branch));
-    if (typeof cands === 'string') return asStr(cands) === asStr(branch);
-    return false;
-  };
-
-  // Uygunluk + o an boş mu (ders çakışmasın)
-  const isFreeAt = (tid, d, s) => {
-    if (state.availability?.teachers?.[tid]?.[d]?.[s] !== true) return false;
-    return !state.assignments.some(a => asStr(a.teacherId) === asStr(tid) && a.day === d && a.slot === s);
-  };
-
-  // Branş -> atamalar
-  const byBranch = new Map();
-  for (const a of state.assignments) {
-    const b = asStr(a.branch);
-    if (!byBranch.has(b)) byBranch.set(b, []);
-    byBranch.get(b).push(a);
-  }
-
-  let swaps = 0;
-
-  for (const [branch, arr] of byBranch) {
-    // Branşa uygun öğretmen evreni
-    const allTids = Object.keys(state.availability?.teachers || {});
-    const eligible = allTids.filter(tid => teacherHasBranch(tid, branch));
-    if (eligible.length === 0 || arr.length === 0) continue;
-
-    // Yükler
-    const load = new Map(eligible.map(tid => [asStr(tid), 0]));
-    for (const a of arr) load.set(asStr(a.teacherId), (load.get(asStr(a.teacherId)) || 0) + 1);
-
-    const avg = arr.length / eligible.length;
-
-    // Sıralı görünümler
-    const desc = [...load.entries()].sort((a, b) => b[1] - a[1]);
-    let asc = [...load.entries()].sort((a, b) => a[1] - b[1]);
-
-    const lightList = () => asc.filter(([_, c]) => c < (avg - 0.5)); // ortalamanın belirgin altı
-
-    // Ağırdan hafife küçük taşımalar
-    for (const [heavyTid, heavyCount] of desc) {
-      let swapsLeft = maxSwapsPerHeavy;
-      if (heavyCount <= avg + (minGap - 1)) continue;
-
-      const candidateLessons = arr.filter(a =>
-        asStr(a.teacherId) === heavyTid &&
-        (!onlyNew || !fixedKeys.has(keyCell(a.group, a.day, a.slot)))
-      );
-
-      for (const a of candidateLessons) {
-        const targetTid = lightList()
-          .map(([tid]) => tid)
-          .find(tid => tid !== heavyTid && isFreeAt(tid, a.day, a.slot));
-
-        if (!targetTid) continue;
-
-        // DEVİR: aynı branş, aynı slot, yeni öğretmen
-        a.teacherId = targetTid;
-        load.set(heavyTid, load.get(heavyTid) - 1);
-        load.set(targetTid, (load.get(targetTid) || 0) + 1);
-        swaps++; swapsLeft--;
-
-        // En hafif listesi değişti
-        asc = [...load.entries()].sort((x, y) => x[1] - y[1]);
-
-        // Artık fark küçükse veya kota dolduysa dur
-        const nowLightest = asc[0]?.[1] ?? 0;
-        if (swapsLeft <= 0) break;
-        if ((load.get(heavyTid) - nowLightest) < minGap) break;
-      }
-    }
-  }
-
-  return swaps;
-}
-</script>
 
 </body>
 </html>
