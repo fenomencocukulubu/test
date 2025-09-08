@@ -1171,17 +1171,42 @@ function openAssignDialog(group, day, slot){
   selB.onchange = fillTeachersForBranch;
   fillTeachersForBranch(); dlg.showModal();
 }
+function hasAnyAssignments(){ return Array.isArray(state.assignments) && state.assignments.length > 0; }
+function getTeacherAssignmentsMap(){
+  const m = new Map();
+  for (const a of state.assignments) {
+    if (!m.has(a.teacherId)) m.set(a.teacherId, []);
+    m.get(a.teacherId).push(a);
+  }
+  return m;
+}
+
 function fillTeachersForBranch(){
   const branch = $("#dlgBranch").value;
   const {day, slot} = dlgCtx || {};
   const selT = $("#dlgTeacher"); selT.innerHTML='';
 
+  const afterAnyAssign = hasAnyAssignments();               // WHY: “auto/any assign yapıldı mı?” koşulu
+  const asgMap = afterAnyAssign ? getTeacherAssignmentsMap() : new Map();
+
   findTeacherOptions(branch).forEach(t=>{
-    const ok = state.availability.teachers[t.id]?.[day]?.[slot] === true;
+    const availOk   = state.availability.teachers[t.id]?.[day]?.[slot] === true;
+    const hasAnyAsg = afterAnyAssign && (asgMap.get(t.id)?.length > 0);
+
+    // Otomatik atama yoksa: sadece uygunluk.
+    // Otomatik atama varsa: uygunluk + öğretmenin hiç ataması olmama şartı.
+    const ok = availOk && (!afterAnyAssign || !hasAnyAsg);
+
     const opt = document.createElement('option');
     opt.value = t.id;
-    opt.textContent = ok ? t.name : `${t.name} (uygun değil)`;
-    if(!ok) opt.disabled = true;
+
+    if (ok) {
+      opt.textContent = t.name;
+    } else {
+      const reason = hasAnyAsg ? 'uygun değil • atanmış' : 'uygun değil';
+      opt.textContent = `${t.name} (${reason})`;
+      opt.disabled = true;
+    }
     selT.appendChild(opt);
   });
 
@@ -1196,6 +1221,12 @@ $("#dlgOk").onclick = ()=>{
   const branch = $("#dlgBranch").value;
   const teacherId = $("#dlgTeacher").value;
 
+  // 0) Otomatik atama/any-assign sonrası; öğretmenin herhangi bir ataması varsa engelle
+  if (hasAnyAssignments() && state.assignments.some(a=>a.teacherId===teacherId)){
+    alert("Bu öğretmenin başka bir derse ataması var (otomatik/manüel). Boştaki bir öğretmen seçin.");
+    return;
+  }
+
   // 1) Öğretmen uygunluk kontrolü (katı engel)
   if (state.availability.teachers[teacherId]?.[day]?.[slot] !== true){
     alert("Seçilen öğretmen bu gün/saati için müsait değil. Lütfen uygun bir öğretmen seçin.");
@@ -1208,7 +1239,7 @@ $("#dlgOk").onclick = ()=>{
     return;
   }
 
-  // Çakışma uyarıları (mevcut davranışı koruyoruz)
+  // Çakışma uyarıları (mevcut davranış)
   if (isTeacherBusy(teacherId, day, slot))
     if(!confirm("Öğretmen bu saatte başka derste. Yine de ata?")) return;
   if (isGroupBusy(group, day, slot))
