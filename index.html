@@ -1228,18 +1228,13 @@ function getTeacherAssignmentsMap(){
 function fillTeachersForBranch(){
   const branch = $("#dlgBranch").value;
   const {day, slot} = dlgCtx || {};
-  const selT = $("#dlgTeacher"); selT.innerHTML='';
+  const selT = $("#dlgTeacher"); selT.innerHTML = '';
 
-  const afterAnyAssign = hasAnyAssignments();               // WHY: “auto/any assign yapıldı mı?” koşulu
-  const asgMap = afterAnyAssign ? getTeacherAssignmentsMap() : new Map();
+  findTeacherOptions(branch).forEach(t => {
+    const availOk = state.availability.teachers[t.id]?.[day]?.[slot] === true;
+    const busyNow = isTeacherBusy(t.id, day, slot); // why: yalnız aynı gün/saat çakışması önemli
 
-  findTeacherOptions(branch).forEach(t=>{
-    const availOk   = state.availability.teachers[t.id]?.[day]?.[slot] === true;
-    const hasAnyAsg = afterAnyAssign && (asgMap.get(t.id)?.length > 0);
-
-    // Otomatik atama yoksa: sadece uygunluk.
-    // Otomatik atama varsa: uygunluk + öğretmenin hiç ataması olmama şartı.
-    const ok = availOk && (!afterAnyAssign || !hasAnyAsg);
+    const ok = availOk && !busyNow;
 
     const opt = document.createElement('option');
     opt.value = t.id;
@@ -1247,7 +1242,7 @@ function fillTeachersForBranch(){
     if (ok) {
       opt.textContent = t.name;
     } else {
-      const reason = hasAnyAsg ? 'uygun değil • atanmış' : 'uygun değil';
+      const reason = busyNow ? 'uygun değil • çakışıyor' : 'uygun değil';
       opt.textContent = `${t.name} (${reason})`;
       opt.disabled = true;
     }
@@ -1255,43 +1250,39 @@ function fillTeachersForBranch(){
   });
 
   // Varsayılan olarak ilk uygun öğretmeni seç
-  const firstEnabled = Array.from(selT.options).find(o=>!o.disabled);
-  if(firstEnabled) selT.value = firstEnabled.value;
+  const firstEnabled = Array.from(selT.options).find(o => !o.disabled);
+  if (firstEnabled) selT.value = firstEnabled.value;
 }
 
 $("#dlgCancel").onclick = ()=> dlg.close();
-$("#dlgOk").onclick = ()=>{
+$("#dlgOk").onclick = () => {
   const {group, day, slot} = dlgCtx;
   const branch = $("#dlgBranch").value;
   const teacherId = $("#dlgTeacher").value;
 
-  // 0) Otomatik atama/any-assign sonrası; öğretmenin herhangi bir ataması varsa engelle
-  if (hasAnyAssignments() && state.assignments.some(a=>a.teacherId===teacherId)){
-    alert("Bu öğretmenin başka bir derse ataması var (otomatik/manüel). Boştaki bir öğretmen seçin.");
-    return;
-  }
-
-  // 1) Öğretmen uygunluk kontrolü (katı engel)
+  // 1) Öğretmen uygunluk kontrolü
   if (state.availability.teachers[teacherId]?.[day]?.[slot] !== true){
     alert("Seçilen öğretmen bu gün/saati için müsait değil. Lütfen uygun bir öğretmen seçin.");
     return;
   }
 
-  // 2) (İsteğe bağlı) grup uygun değilse de engelle
+  // 2) Grup uygunluk kontrolü (isteğe bağlı)
   if (state.availability.groups[group]?.[day]?.[slot] !== true){
     alert("Bu grup bu gün/saati için müsait değil.");
     return;
   }
 
-  // Çakışma uyarıları (mevcut davranış)
+  // 3) Çakışma uyarıları (yalnız aynı saat)
   if (isTeacherBusy(teacherId, day, slot))
     if(!confirm("Öğretmen bu saatte başka derste. Yine de ata?")) return;
   if (isGroupBusy(group, day, slot))
     if(!confirm("Bu gruba bu saatte başka atama var. Üzerine yazılsın mı?")) return;
 
-  state.assignments = state.assignments.filter(a=>!(a.group===group && a.day===day && a.slot===slot));
+  // 4) Mevcut atamayı temizle ve yeni atamayı yaz
+  state.assignments = state.assignments.filter(a => !(a.group===group && a.day===day && a.slot===slot));
   state.assignments.push({group, day, slot, branch, teacherId});
-  dlg.close(); renderAssignCards();
+  dlg.close(); 
+  renderAssignCards(); // why: UI ve uygunluk anında güncellensin
 };
 // index.html — Auto Assign (V4.1): Maks Yerleşim Odaklı, Yük Dengesi YOK
 
