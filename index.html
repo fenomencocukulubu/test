@@ -576,10 +576,11 @@
           </div>
         </div>
       </section>
-      <footer>
-        <button class="btn ghost" id="dlgCancel">Vazgeç</button>
-        <button class="btn" id="dlgOk">Kaydet</button>
-      </footer>
+     <footer>
+  <button class="btn ghost" id="dlgCancel">Vazgeç</button>
+  <button class="btn danger" id="dlgDelete" hidden>Atamayı Sil</button>
+  <button class="btn" id="dlgOk">Kaydet</button>
+</footer>
     </dialog>
 
     <div class="row">
@@ -1160,17 +1161,60 @@ function renderAssignCards(){
     wrap.appendChild(card);
   });
 }
-const dlg = $("#dlgAssign"); let dlgCtx=null;
-function openAssignDialog(group, day, slot){
-  dlgCtx = {group, day, slot};
+const dlg = $("#dlgAssign"); let dlgCtx = null;
+
+function openAssignDialog(group, day, slot) {
+  dlgCtx = { group, day, slot };
   $("#dlgGroup").value = group;
-  const time = state.program.slotLabels?.[slot] || `${slot+1}. saat`;
+
+  const time = state.program.slotLabels?.[slot] || `${slot + 1}. saat`;
   $("#dlgWhen").value = `${state.program.days[day]} • ${time}`;
-  const selB = $("#dlgBranch"); selB.innerHTML='';
-  state.branches.forEach(b=>{ const opt=document.createElement('option'); opt.value=b; opt.textContent=b; selB.appendChild(opt); });
+
+  // Branş seçenekleri
+  const selB = $("#dlgBranch");
+  selB.innerHTML = '';
+  state.branches.forEach(b => {
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    selB.appendChild(opt);
+  });
   selB.onchange = fillTeachersForBranch;
-  fillTeachersForBranch(); dlg.showModal();
+
+  // Mevcut atama var mı?
+  const current = state.assignments.find(a => a.group === group && a.day === day && a.slot === slot);
+
+  // Eğer hücrede atama varsa, o branşı ön-seç
+  if (current) selB.value = current.branch;
+
+  // Öğretmen listesini branşa göre doldur
+  fillTeachersForBranch();
+
+  // Öğretmen ön-seçimi (mevcut atama varsa)
+  if (current) {
+    // Not: Öğretmen başka yerde atanmışsa UI'da "atanmış" olarak görünebilir.
+    // Sil butonunu göstermek asıl hedef; seçim başarısız olsa da sorun değil.
+    const selT = $("#dlgTeacher");
+    selT.value = current.teacherId;
+    $("#dlgDelete").hidden = false;
+  } else {
+    $("#dlgDelete").hidden = true;
+  }
+
+  dlg.showModal();
 }
+$("#dlgDelete").onclick = () => {
+  if (!dlgCtx) return;
+  const { group, day, slot } = dlgCtx;
+  const has = state.assignments.some(a => a.group === group && a.day === day && a.slot === slot);
+  if (!has) { dlg.close(); return; }
+
+  if (confirm("Bu atamayı silmek istiyor musunuz?")) {
+    state.assignments = state.assignments.filter(a => !(a.group === group && a.day === day && a.slot === slot));
+    dlg.close();
+    renderAssignCards(); // why: öğretmen anında tekrar 'müsait' görünsün
+  }
+};
+
 function hasAnyAssignments(){ return Array.isArray(state.assignments) && state.assignments.length > 0; }
 function getTeacherAssignmentsMap(){
   const m = new Map();
