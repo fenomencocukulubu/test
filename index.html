@@ -577,7 +577,35 @@
           </div>
         </div>
       </section>
-      <section class="content grid tabpanel" id="step7" role="tabpanel" hidden>
+  <!-- STEP 6 -->
+  <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
+    <div class="section-title">
+      <h2>Yazdır / Rapor</h2>
+      <div class="chips no-print">
+        <span class="pill">A4 çıktı, sayfa başı öğretmen/grup</span>
+        <span class="pill">Sadece atama varsa</span>
+      </div>
+    </div>
+    <div class="row no-print">
+      <label>Görünüm<br/>
+        <select id="printMode">
+          <option value="group">Gruba göre</option>
+          <option value="teacher">Öğretmene göre</option>
+        </select>
+      </label>
+      <label>Filtre<br/>
+        <select id="printFilter"></select>
+      </label>
+      <button class="btn" id="btnRenderPrint">Önizleme</button>
+      <button class="btn sec" id="btnPrint" onclick="window.print()">Yazdır</button>
+      <!-- YENİ: hızlı geçiş -->
+      <button class="btn sec" id="goto7">Devam → Boşta Öğretmenler</button>
+    </div>
+    <div id="printPreview" class="grid printable"></div>
+  </section>
+
+  <!-- === YENİ: STEP 7 – Boşta Öğretmenler === -->
+  <section class="content grid tabpanel" id="step7" role="tabpanel" hidden>
     <div class="section-title">
       <h2>Boşta / Müsait Öğretmenler</h2>
       <div class="chips">
@@ -605,42 +633,6 @@
 
     <div class="free-meta" id="freeMeta"></div>
     <div id="freeListWrap" class="free-list"></div>
-  </section>
-     <footer>
-  <button class="btn ghost" id="dlgCancel">Vazgeç</button>
-  <button class="btn danger" id="dlgDelete" hidden>Atamayı Sil</button>
-  <button class="btn" id="dlgOk">Kaydet</button>
-</footer>
-    </dialog>
-
-    <div class="row">
-      <button class="btn sec right" id="goto6">Devam → Yazdır</button>
-    </div>
-  </section>
-
-  <!-- STEP 6 -->
-  <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
-    <div class="section-title">
-      <h2>Yazdır / Rapor</h2>
-      <div class="chips no-print">
-        <span class="pill">A4 çıktı, sayfa başı öğretmen/grup</span>
-        <span class="pill">Sadece atama varsa</span>
-      </div>
-    </div>
-    <div class="row no-print">
-      <label>Görünüm<br/>
-        <select id="printMode">
-          <option value="group">Gruba göre</option>
-          <option value="teacher">Öğretmene göre</option>
-        </select>
-      </label>
-      <label>Filtre<br/>
-        <select id="printFilter"></select>
-      </label>
-      <button class="btn" id="btnRenderPrint">Önizleme</button>
-      <button class="btn sec" id="btnPrint" onclick="window.print()">Yazdır</button>
-    </div>
-    <div id="printPreview" class="grid printable"></div>
   </section>
 </div>
 
