@@ -1241,17 +1241,21 @@ function fillTeachersForBranch(){
   const firstEnabled = Array.from(selT.options).find(o=>!o.disabled);
   if(firstEnabled) selT.value = firstEnabled.value;
 }
-$("#dlgDelete").onclick = () => {
-  if (!confirm("Bu atamayı silmek istediğinize emin misiniz?")) return;
-
-  const { group, day, slot } = dlgCtx || {};
-  // Sadece bu grup-gün-saat kombinasyonundaki atamayı kaldır
+$("#dlgDelete").onclick = ()=>{
+  const {group, day, slot} = dlgCtx || {};
+  // Sadece bu hücreyi sil
   state.assignments = state.assignments.filter(a =>
-    !(a.group === group && a.day === day && a.slot === slot)
+    !(a.group===group && a.day===day && a.slot===slot)
   );
 
-  dlg.close();
-  renderAssignCards();  // görünümü yenile
+  // Listeyi bu hücre bağlamında tazele → silinen öğretmen şimdi uygun olarak görünsün
+  fillTeachersForBranch();
+
+  // Artık bu hücrede atama kalmadığı için “Sil”i gizleyebilirsiniz
+  $("#dlgDelete").style.display = 'none';
+
+  // Arka planda grid/kartları güncelle
+  renderAssignCards();
 };
 $("#dlgCancel").onclick = ()=> dlg.close();
 $("#dlgOk").onclick = ()=>{
