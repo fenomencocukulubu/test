@@ -376,13 +376,6 @@
     .att-table th,.att-table td{border:1px solid #0f172a;padding:3px 4px;text-align:center}
     .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
-   #step7 .filters label { display:inline-grid; gap:4px; }
-  #step7 .free-meta { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; }
-  #step7 .free-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:12px; }
-  #step7 .free-card .body { display:grid; gap:8px; }
-  #step7 .free-card .byday { display:flex; flex-wrap:wrap; gap:6px; }
-  #step7 .free-card .byday .pill { background:#f1f5f9; }
-  #step7 .muted { color:var(--muted); }
 </style>
 </head>
 <body>
@@ -409,7 +402,6 @@
     <button class="tab" data-panel="step4" role="tab">4. Grup Talepleri</button>
     <button class="tab" data-panel="step5" role="tab">5. Atama Paneli</button>
     <button class="tab" data-panel="step6" role="tab">Yazdır</button>
-    <button class="tab" data-panel="step7" role="tab">Boşta Öğretmenler</button>
   </div>
 
   <!-- STEP 1 -->
@@ -597,7 +589,7 @@
   </section>
 
   <!-- STEP 6 -->
-   <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
+  <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
     <div class="section-title">
       <h2>Yazdır / Rapor</h2>
       <div class="chips no-print">
@@ -617,41 +609,8 @@
       </label>
       <button class="btn" id="btnRenderPrint">Önizleme</button>
       <button class="btn sec" id="btnPrint" onclick="window.print()">Yazdır</button>
-      <!-- YENİ: hızlı geçiş -->
-      <button class="btn sec" id="goto7">Devam → Boşta Öğretmenler</button>
     </div>
     <div id="printPreview" class="grid printable"></div>
-  </section>
-
-  <!-- === YENİ: STEP 7 – Boşta Öğretmenler === -->
-  <section class="content grid tabpanel" id="step7" role="tabpanel" hidden>
-    <div class="section-title">
-      <h2>Boşta / Müsait Öğretmenler</h2>
-      <div class="chips">
-        <span class="pill">Listede: öğretmen müsait & aynı saat ataması yok</span>
-      </div>
-    </div>
-
-    <div class="row no-print filters">
-      <label>Branş<br/>
-        <select id="freeBranchFilter"></select>
-      </label>
-      <label>Gün<br/>
-        <select id="freeDayFilter"></select>
-      </label>
-      <label>Saat<br/>
-        <select id="freeSlotFilter"></select>
-      </label>
-      <label style="display:inline-flex;align-items:center;gap:6px;margin-top:18px">
-        <input type="checkbox" id="freeOnlyAvail" checked />
-        Sadece “müsait” işaretli saatler
-      </label>
-      <button class="btn" id="btnFreeRefresh" style="margin-top:18px">Listele</button>
-      <button class="btn ghost" id="btnFreeExport" style="margin-top:18px">JSON Dışa Aktar</button>
-    </div>
-
-    <div class="free-meta" id="freeMeta"></div>
-    <div id="freeListWrap" class="free-list"></div>
   </section>
 </div>
 
@@ -2787,196 +2746,7 @@ function printTeachersV2(){
 }
 
 </script>
-<script>
-/* ===== Global Durum & yardımcılarınız ===== */
-/* ... (MEVCUT TÜM JS BLOĞUNUZ AYNEN KALSIN) ... */
 
-/* === Ders -> sınıf kısaltması (gerekirse mevcutsa kullanır) === */
-const BRANCH_CLASS = { 'MATEMATİK':'mat','FEN BİLİMLERİ':'fen','TÜRKÇE':'trk',
-  'SOSYAL BİLGİLER':'sos','İNGİLİZCE':'ing','DİN KÜLTÜRÜ':'din' };
-const bcls = b => 'b-' + (BRANCH_CLASS[b] || toId(b));
-
-/* --- showTopTab içine Step 7 tetikleyicisi EKLENDİ --- */
-(function patchShowTopTab(){
-  const _orig = window.showTopTab;
-  window.showTopTab = function(panelId){
-    _orig(panelId);
-    if(panelId === 'step7'){
-      initFreeFilters();
-      renderFreeTeachersPanel();
-    }
-  };
-})();
-
-/* --- Step 7: filtreleri doldur --- */
-function initFreeFilters(){
-  const selB = $("#freeBranchFilter");
-  const selD = $("#freeDayFilter");
-  const selS = $("#freeSlotFilter");
-
-  // Branş
-  selB.innerHTML = '';
-  const o0 = document.createElement('option'); o0.value=''; o0.textContent='(Tüm branşlar)';
-  selB.appendChild(o0);
-  state.branches.forEach(b=>{
-    const o=document.createElement('option'); o.value=b; o.textContent=b; selB.appendChild(o);
-  });
-
-  // Gün
-  selD.innerHTML = '';
-  const d0 = document.createElement('option'); d0.value=''; d0.textContent='(Tüm günler)';
-  selD.appendChild(d0);
-  (state.program.days||[]).forEach((d,ix)=>{
-    const o=document.createElement('option'); o.value=String(ix); o.textContent=d; selD.appendChild(o);
-  });
-
-  // Saat
-  selS.innerHTML = '';
-  const s0 = document.createElement('option'); s0.value=''; s0.textContent='(Tüm saatler)';
-  selS.appendChild(s0);
-  for(let s=0; s<state.program.slots; s++){
-    const o=document.createElement('option'); o.value=String(s);
-    const label = state.program.slotLabels?.[s] ? ` • ${state.program.slotLabels[s]}` : '';
-    o.textContent = `${s+1}. saat${label}`;
-    selS.appendChild(o);
-  }
-
-  $("#btnFreeRefresh").onclick = renderFreeTeachersPanel;
-  $("#btnFreeExport").onclick = exportFreeTeachersJSON;
-}
-
-/* --- Step 7: veri üretimi --- */
-function computeFreeTeachers(){
-  const D = state.program.days.length;
-  const S = state.program.slots;
-
-  const branch = $("#freeBranchFilter").value || '';
-  const daySel = $("#freeDayFilter").value;
-  const slotSel = $("#freeSlotFilter").value;
-  const onlyAvail = $("#freeOnlyAvail").checked;
-
-  const dayFilter  = daySel===''  ? null : +daySel;
-  const slotFilter = slotSel==='' ? null : +slotSel;
-
-  const rows = [];
-
-  state.teachers
-    .filter(t => !branch || t.branch === branch)
-    .forEach(t=>{
-      const freeByDay = Array.from({length:D},()=>[]);
-      let totalFree = 0;
-
-      for(let d=0; d<D; d++){
-        if(dayFilter!==null && d!==dayFilter) continue;
-        for(let s=0; s<S; s++){
-          if(slotFilter!==null && s!==slotFilter) continue;
-
-          const avail = state.availability.teachers?.[t.id]?.[d]?.[s] === true;
-          const busy  = isTeacherBusy(t.id, d, s);
-
-          // sadece "müsait" isteniyorsa availability=true olmalı
-          const ok = (onlyAvail ? avail : true) && !busy;
-
-          if(ok){
-            freeByDay[d].push(s);
-            totalFree++;
-          }
-        }
-      }
-
-      if(totalFree>0){
-        rows.push({ teacher:t, freeByDay, totalFree });
-      }
-    });
-
-  rows.sort((a,b)=>
-    (b.totalFree - a.totalFree) ||
-    a.teacher.name.localeCompare(b.teacher.name,'tr')
-  );
-
-  return rows;
-}
-
-/* --- Step 7: render --- */
-function renderFreeTeachersPanel(){
-  const wrap = $("#freeListWrap"); wrap.innerHTML='';
-  const meta = $("#freeMeta"); meta.innerHTML='';
-
-  const data = computeFreeTeachers();
-  const totSlots = data.reduce((a,r)=>a+r.totalFree,0);
-
-  const info1 = document.createElement('span'); info1.className='pill'; info1.textContent = `Öğretmen: ${data.length}`;
-  const info2 = document.createElement('span'); info2.className='pill'; info2.textContent = `Toplam boş slot: ${totSlots}`;
-  meta.append(info1, info2);
-
-  if(data.length===0){
-    wrap.innerHTML = '<div class="muted">Filtreye uyan boş/müsait öğretmen bulunamadı.</div>';
-    return;
-  }
-
-  const days = state.program.days;
-  const labels = state.program.slotLabels || [];
-
-  data.forEach(row=>{
-    const card = document.createElement('div'); card.className='card free-card';
-    const head = document.createElement('div'); head.className='flex';
-    head.innerHTML = `<b>👤 ${row.teacher.name}</b><span class="tag">${row.teacher.branch}</span><span class="pill">${row.totalFree} boş</span>`;
-    card.appendChild(head);
-
-    const body = document.createElement('div'); body.className='body';
-    const byDay = document.createElement('div'); byDay.className='byday';
-
-    for(let d=0; d<days.length; d++){
-      const arr = row.freeByDay[d];
-      if(!arr || arr.length===0) continue;
-
-      // "1, 3, 5 (16:30-17:10)" tadında gösterim
-      const txt = arr.map(s=>{
-        const lbl = labels[s] ? ` (${labels[s]})` : '';
-        return `${s+1}${lbl}`;
-      }).join(', ');
-
-      const pill = document.createElement('span');
-      pill.className='pill';
-      pill.textContent = `${days[d]}: ${txt}`;
-      byDay.appendChild(pill);
-    }
-
-    if(!byDay.children.length){
-      const em = document.createElement('div'); em.className='muted'; em.textContent = 'Seçilen filtreye göre boş saat yok.';
-      body.appendChild(em);
-    }else{
-      body.appendChild(byDay);
-    }
-
-    card.appendChild(body);
-    wrap.appendChild(card);
-  });
-}
-
-/* --- Step 7: dışa aktarma --- */
-function exportFreeTeachersJSON(){
-  const days = state.program.days;
-  const labels = state.program.slotLabels || [];
-  const data = computeFreeTeachers().map(r=>({
-    teacherId: r.teacher.id,
-    teacher: r.teacher.name,
-    branch: r.teacher.branch,
-    totalFree: r.totalFree,
-    free: r.freeByDay.map((slots, d)=>({
-      dayIndex: d,
-      day: days[d],
-      slots: slots.map(s=>({ slot:s, label: labels[s] || `${s+1}. saat` }))
-    })).filter(x=>x.slots.length>0)
-  }));
-  download('bos-ogretmenler.json', data);
-}
-
-/* === Mevcut bağlayıcılarınızın yanına küçük ekler === */
-document.getElementById('goto7')?.addEventListener('click', ()=> showTopTab('step7'));
-
-/* Mevcut init akışınızda zaten bindTopTabs()/showTopTab vb. çalışıyor. */
-</script>
 
 </body>
 </html>
