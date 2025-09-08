@@ -376,6 +376,13 @@
     .att-table th,.att-table td{border:1px solid #0f172a;padding:3px 4px;text-align:center}
     .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
+   #step7 .filters label { display:inline-grid; gap:4px; }
+  #step7 .free-meta { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; }
+  #step7 .free-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:12px; }
+  #step7 .free-card .body { display:grid; gap:8px; }
+  #step7 .free-card .byday { display:flex; flex-wrap:wrap; gap:6px; }
+  #step7 .free-card .byday .pill { background:#f1f5f9; }
+  #step7 .muted { color:var(--muted); }
 </style>
 </head>
 <body>
@@ -577,8 +584,20 @@
           </div>
         </div>
       </section>
+     <footer>
+  <button class="btn ghost" id="dlgCancel">Vazgeç</button>
+  <button class="btn danger" id="dlgDelete" hidden>Atamayı Sil</button>
+  <button class="btn" id="dlgOk">Kaydet</button>
+</footer>
+    </dialog>
+
+    <div class="row">
+      <button class="btn sec right" id="goto6">Devam → Yazdır</button>
+    </div>
+  </section>
+
   <!-- STEP 6 -->
-  <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
+   <section class="content grid tabpanel" id="step6" role="tabpanel" hidden>
     <div class="section-title">
       <h2>Yazdır / Rapor</h2>
       <div class="chips no-print">
@@ -2768,18 +2787,6 @@ function printTeachersV2(){
 }
 
 </script>
-<style>
-  /* ... (MEVCUT TÜM STİLLERİNİZ BURADA AYNEN KALSIN) ... */
-
-  /* === STEP 7: Boşta Öğretmenler paneli (hafif stil) === */
-  #step7 .filters label { display:inline-grid; gap:4px; }
-  #step7 .free-meta { display:flex; gap:8px; flex-wrap:wrap; margin:6px 0 10px; }
-  #step7 .free-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(420px,1fr)); gap:12px; }
-  #step7 .free-card .body { display:grid; gap:8px; }
-  #step7 .free-card .byday { display:flex; flex-wrap:wrap; gap:6px; }
-  #step7 .free-card .byday .pill { background:#f1f5f9; }
-  #step7 .muted { color:var(--muted); }
-</style>
 <script>
 /* ===== Global Durum & yardımcılarınız ===== */
 /* ... (MEVCUT TÜM JS BLOĞUNUZ AYNEN KALSIN) ... */
@@ -2970,5 +2977,6 @@ document.getElementById('goto7')?.addEventListener('click', ()=> showTopTab('ste
 
 /* Mevcut init akışınızda zaten bindTopTabs()/showTopTab vb. çalışıyor. */
 </script>
+
 </body>
 </html>
