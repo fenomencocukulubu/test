@@ -576,10 +576,11 @@
           </div>
         </div>
       </section>
-      <footer>
-        <button class="btn ghost" id="dlgCancel">Vazgeç</button>
-        <button class="btn" id="dlgOk">Kaydet</button>
-      </footer>
+    <footer>
+  <button id="dlgDelete" class="btn danger" style="display:none">Atamayı Sil</button>
+  <button class="btn ghost" id="dlgCancel">Vazgeç</button>
+  <button class="btn" id="dlgOk">Kaydet</button>
+</footer>
     </dialog>
 
     <div class="row">
@@ -1163,14 +1164,40 @@ function renderAssignCards(){
 const dlg = $("#dlgAssign"); let dlgCtx=null;
 function openAssignDialog(group, day, slot){
   dlgCtx = {group, day, slot};
+
   $("#dlgGroup").value = group;
   const time = state.program.slotLabels?.[slot] || `${slot+1}. saat`;
   $("#dlgWhen").value = `${state.program.days[day]} • ${time}`;
-  const selB = $("#dlgBranch"); selB.innerHTML='';
-  state.branches.forEach(b=>{ const opt=document.createElement('option'); opt.value=b; opt.textContent=b; selB.appendChild(opt); });
+
+  // Branşları doldur
+  const selB = $("#dlgBranch");
+  selB.innerHTML = '';
+  state.branches.forEach(b=>{
+    const opt = document.createElement('option');
+    opt.value = b; opt.textContent = b;
+    selB.appendChild(opt);
+  });
   selB.onchange = fillTeachersForBranch;
-  fillTeachersForBranch(); dlg.showModal();
+
+  // Bu hücrede mevcut atama var mı?
+  const existing = state.assignments.find(a =>
+    a.group === group && a.day === day && a.slot === slot
+  );
+
+  // Öğretmen listesini doldur ve varsa mevcutu seç
+  fillTeachersForBranch();
+  if (existing){
+    selB.value = existing.branch;
+    fillTeachersForBranch();                 // branş değişince listeyi yenile
+    $("#dlgTeacher").value = String(existing.teacherId);
+    $("#dlgDelete").style.display = '';      // Sil butonunu göster
+  } else {
+    $("#dlgDelete").style.display = 'none';  // Sil butonunu gizle
+  }
+
+  dlg.showModal();
 }
+
 function hasAnyAssignments(){ return Array.isArray(state.assignments) && state.assignments.length > 0; }
 function getTeacherAssignmentsMap(){
   const m = new Map();
@@ -1214,7 +1241,18 @@ function fillTeachersForBranch(){
   const firstEnabled = Array.from(selT.options).find(o=>!o.disabled);
   if(firstEnabled) selT.value = firstEnabled.value;
 }
+$("#dlgDelete").onclick = () => {
+  if (!confirm("Bu atamayı silmek istediğinize emin misiniz?")) return;
 
+  const { group, day, slot } = dlgCtx || {};
+  // Sadece bu grup-gün-saat kombinasyonundaki atamayı kaldır
+  state.assignments = state.assignments.filter(a =>
+    !(a.group === group && a.day === day && a.slot === slot)
+  );
+
+  dlg.close();
+  renderAssignCards();  // görünümü yenile
+};
 $("#dlgCancel").onclick = ()=> dlg.close();
 $("#dlgOk").onclick = ()=>{
   const {group, day, slot} = dlgCtx;
