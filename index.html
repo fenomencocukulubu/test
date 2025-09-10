@@ -1278,11 +1278,18 @@ $("#dlgOk").onclick = () => {
   if (isGroupBusy(group, day, slot))
     if(!confirm("Bu gruba bu saatte başka atama var. Üzerine yazılsın mı?")) return;
 
-  // 4) Mevcut atamayı temizle ve yeni atamayı yaz
+  // 4) Atamayı yaz
   state.assignments = state.assignments.filter(a => !(a.group===group && a.day===day && a.slot===slot));
   state.assignments.push({group, day, slot, branch, teacherId});
-  dlg.close(); 
+  dlg.close();
   renderAssignCards(); // why: UI ve uygunluk anında güncellensin
+
+  // Yazdır sekmesi açıksa anında tazele (why: manuel atama sonrası önizleme güncel kalsın)
+  const printPanel = $('#step6');
+  if (printPanel && !printPanel.hasAttribute('hidden')) {
+    refreshPrintFilters();
+    renderPrintPreview();
+  }
 };
 // index.html — Auto Assign (V4.1): Maks Yerleşim Odaklı, Yük Dengesi YOK
 
