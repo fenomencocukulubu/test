@@ -1124,8 +1124,6 @@ function prevGroupSubject(groupId, day, slot){
 }
 function hasAssignmentsForGroup(gid){ return state.assignments.some(a=>a.group===gid); }
 function renderAssignCards() {
-  const USE_TEACHER_INTERSECTION = false; // true yaparsanız: grup ∩ herhangi bir öğretmen
-
   const wrap = document.getElementById("assignCards");
   if (!wrap) return;
   wrap.innerHTML = "";
@@ -1133,7 +1131,8 @@ function renderAssignCards() {
   const days = state.program.days;
   const S = state.program.slots;
 
-  const groups = Object.values(state.groups).slice()
+  const groups = Object.values(state.groups)
+    .slice()
     .sort((a, b) =>
       (hasAssignmentsForGroup(b.id) ? 1 : 0) - (hasAssignmentsForGroup(a.id) ? 1 : 0) ||
       groupComparator(a, b)
@@ -1144,7 +1143,7 @@ function renderAssignCards() {
     card.className = "card";
 
     const head = document.createElement("div");
-    head.className = "flex";
+    head.className = "flex items-center gap-2";
     const count = state.assignments.filter((a) => a.group === g.id).length;
     head.innerHTML = `
       <b>${g.name}</b>
@@ -1152,23 +1151,27 @@ function renderAssignCards() {
       <span class="pill">${count} atama</span>`;
     card.appendChild(head);
 
+    // tablo başlığı
     const grid = document.createElement("div");
     grid.className = "kgrid";
     grid.style.setProperty("--cols", S);
-    grid.dataset.cols = S;
 
     const headRow = document.createElement("div");
     headRow.className = "kgrid";
     headRow.style.setProperty("--cols", S);
-    headRow.appendChild(Object.assign(document.createElement("div"), { textContent: "Gün / Saat", style: "font-weight:700" }));
+    const headDay = document.createElement("div");
+    headDay.textContent = "Gün / Saat";
+    headDay.style.fontWeight = "700";
+    headRow.appendChild(headDay);
     for (let s = 0; s < S; s++) {
       const th = document.createElement("div");
       th.className = "kcell";
-      th.textContent = (s + 1).toString();
+      th.textContent = String(s + 1);
       headRow.appendChild(th);
     }
     grid.appendChild(headRow);
 
+    // gün/slot hücreleri
     for (let d = 0; d < days.length; d++) {
       const row = document.createElement("div");
       row.className = "kgrid";
@@ -1185,28 +1188,16 @@ function renderAssignCards() {
         cell.dataset.d = d;
         cell.dataset.s = s;
 
-        const cur = state.assignments.find((a) => a.group === g.id && a.day === d && a.slot === s);
+        const cur = state.assignments.find(
+          (a) => a.group === g.id && a.day === d && a.slot === s
+        );
 
         if (cur) {
-          cell.classList.add("busy");
-          cell.innerHTML = `
-            <div style="text-align:center">
-              <div>${(state.subjects?.[cur.subjectId]?.name) || ""}</div>
-              <div>${(state.teachers?.[cur.teacherId]?.name) || ""}</div>
-            </div>`;
+          // Sadece sınıf ekle. İçerik/HTML eklemeyerek kutu boyutları korunur.
+          cell.classList.add("busy"); // why: atama varsa farklı renk göstermek için
         } else {
-          // ——— RENKLENDİRME: MÜSAİTLİKLERDEN ———
           const groupAvail = !!(state.availability?.groups?.[g.id]?.[d]?.[s]);
-          let ok = groupAvail;
-
-          if (ok && USE_TEACHER_INTERSECTION) {
-            // En az bir öğretmen aynı slotta uygun mu?
-            const teachers = Object.values(state.teachers || {});
-            const anyTeacherFree = teachers.some((t) => !!(state.availability?.teachers?.[t.id]?.[d]?.[s]));
-            ok = anyTeacherFree;
-          }
-
-          cell.classList.add(ok ? "ok" : "bad");
+          cell.classList.add(groupAvail ? "ok" : "bad"); // why: hızlı görsel ipucu
         }
 
         cell.onclick = () => openAssignDialog(g.id, d, s);
@@ -2813,7 +2804,12 @@ function printTeachersV2(){
 }
 
 </script>
-
+<style>
+  /* Yalnızca renk; boyutlara dokunmaz */
+  .kcell.ok  { background-color:#eaf9ee !important; border-color:#2f9e44 !important; }
+  .kcell.bad { background-color:#ffe8e8 !important; border-color:#e03131 !important; }
+  .kcell.busy{ background-color:#ede7ff !important; border-color:#6741d9 !important; }
+</style>
 
 </body>
 </html>
