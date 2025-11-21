@@ -562,6 +562,17 @@
     </div>
     <div id="assignCards" class="cards"></div>
 
+    <!-- Otomatik Atama Analizi (TAP içi) -->
+    <div id="assignAnalysis" class="card no-print" hidden>
+      <header>Otomatik Atama Analizi</header>
+      <div class="mini2 muted">
+        Otomatik atama tamamlandığında öğretmenlerin kaç derse girdiği, hangi gruplara atandığı
+        ve öğretmen boşken ders yazılabilecek slotlar burada listelenir. Butonlardan direkt
+        manuel atama penceresini açabilirsin.
+      </div>
+      <div id="assignAnalysisBody" style="margin-top:8px"></div>
+    </div>
+
     <dialog id="dlgAssign">
       <header>Manuel Atama</header>
       <section>
@@ -1308,6 +1319,28 @@ function autoAssign() {
   const MAX_CONFLICT_ROWS_IN_UI = 20;
   // ---------------------------
 
+  // Aynı grup + aynı branş için, bir öğretmenin o gruba kaç kere girdiğini say
+  function countGroupBranchForTeacher(gid, branch, tid, gGrid, gGridBase) {
+    let c = 0;
+
+    const addFrom = (grid) => {
+      const mat = grid[gid];
+      if (!mat) return;
+      for (let d = 0; d < D; d++) {
+        const row = mat[d];
+        if (!row) continue;
+        for (let s = 0; s < S; s++) {
+          const a = row[s];
+          if (a && a.branch === branch && a.teacherId === tid) c++;
+        }
+      }
+    };
+
+    addFrom(gGridBase);
+    addFrom(gGrid);
+    return c;
+  }
+
   // --- Yardımcılar ---
   const makeGrid = (rows, cols, fill=null) => Array.from({length:rows}, () => Array(cols).fill(fill));
   const keyCell = (g,d,s) => `${g}|${d}|${s}`;
@@ -1522,9 +1555,20 @@ function autoAssign() {
             .filter(t => state.availability.teachers[t.id]?.[d]?.[s] === true && !(tGrid[t.id]||[])[d]?.[s]);
           if (candidates.length === 0) continue;
 
-          shuffle(candidates);
+          // 1) Önce, bu grup+branşı daha az alan öğretmenleri öne al
+          // 2) Eşit olanlar arasında yine rastgelelik kalsın (rand)
+          const sorted = candidates
+            .map(t => ({
+              teacher: t,
+              count: countGroupBranchForTeacher(gid, branch, t.id, gGrid, gGridBase),
+              rand: Math.random()
+            }))
+            .sort((a, b) => {
+              if (a.count !== b.count) return a.count - b.count; // az dersi olan önce
+              return a.rand - b.rand; // eşitlerde hafif random
+            });
 
-          for (const t of candidates) {
+          for (const { teacher: t } of sorted) {
             if (!canUse(gGrid, tGrid, gid, t.id, d, s)) continue;
 
             const a = { group: gid, day: d, slot: s, branch, teacherId: t.id };
@@ -1669,6 +1713,75 @@ function autoAssign() {
       }
     }
 
+    // --- Öğretmen bazlı özet: toplam ders + boşken ders yazılabilecek slotlar ---
+    const teacherMap = {};
+    for (const t of (state.teachers || [])) {
+      teacherMap[t.id] = {
+        id: t.id,
+        name: t.name,
+        branch: t.branch,
+        totalLessons: 0,
+        groups: new Set(),
+        potentialSlots: []
+      };
+    }
+
+    // Mevcut atamalardan toplam ders ve grup listesi
+    for (const a of state.assignments) {
+      const ts = teacherMap[a.teacherId];
+      if (!ts) continue;
+      ts.totalLessons++;
+      ts.groups.add(a.group);
+    }
+
+    // Boş ama ders yazılabilecek slotlardan öğretmenlere fırsat bağlama
+    for (const info of emptyDetails) {
+      // 1) Öğretmen boş ama atama yapılamamış slotlar
+      if (info.reason === 'ogretmen_yok_veya_mecbur_cakisiyor' && Array.isArray(info.freeTeachers)) {
+        for (const t of info.freeTeachers) {
+          const ts = teacherMap[t.id];
+          if (!ts) continue;
+          ts.potentialSlots.push({
+            type: 'free',
+            group: info.group,
+            day: info.day,
+            slot: info.slot,
+            neededBranches: info.neededBranches || []
+          });
+        }
+      }
+
+      // 2) "Uygun kombo var ama yerleşmedi" tipindeki önerilerde yer alan öğretmenler
+      if (info.reason === 'uygun_kombo_var_ama_yerlesmedi' && Array.isArray(info.suggestion)) {
+        for (const sug of info.suggestion) {
+          const br = sug.branch;
+          for (const tName of (sug.teachers || [])) {
+            const teacher = (state.teachers || []).find(t => t.name === tName);
+            if (!teacher) continue;
+            const ts = teacherMap[teacher.id];
+            if (!ts) continue;
+            ts.potentialSlots.push({
+              type: 'suggested',
+              group: info.group,
+              day: info.day,
+              slot: info.slot,
+              suggestedBranch: br
+            });
+          }
+        }
+      }
+    }
+
+    const teacherStats = Object.values(teacherMap).map(ts => ({
+      ...ts,
+      groups: Array.from(ts.groups)
+    })).sort((a, b) => {
+      const ab = String(a.branch || '');
+      const bb = String(b.branch || '');
+      if (ab !== bb) return ab.localeCompare(bb, 'tr');
+      return String(a.name || '').localeCompare(String(b.name || ''), 'tr');
+    });
+
     return {
       totals: {
         groups: groups.length,
@@ -1683,7 +1796,8 @@ function autoAssign() {
         emptyAll: emptyCount
       },
       reasons: reasonStats,
-      details: emptyDetails
+      details: emptyDetails,
+      teacherStats
     };
   }
 
@@ -1694,8 +1808,8 @@ function autoAssign() {
       dlg.id = 'dlgAutoAssignReport';
       dlg.style.padding = '16px';
       dlg.style.borderRadius = '14px';
-      dlg.style.maxWidth = '1200px';              // genişletildi
-      dlg.style.width = 'min(98vw, 1200px)';      // genişletildi
+      dlg.style.maxWidth = '1200px';
+      dlg.style.width = 'min(98vw, 1200px)';
       dlg.innerHTML = `
         <header style="font-weight:800;font-size:18px;margin-bottom:8px">🧾 Otomatik Atama Raporu</header>
         <section id="autoAssignReportBody" style="max-height:60vh;overflow:auto"></section>
@@ -1710,159 +1824,353 @@ function autoAssign() {
         const txt = dlg.querySelector('#autoAssignReportBody').innerText;
         navigator.clipboard?.writeText(txt);
       };
+    }
 
-      // Event delegation: öğretmen seçimi -> branşları filtrele
-      const bodyEl = dlg.querySelector('#autoAssignReportBody');
-      bodyEl.addEventListener('change', (e) => {
-        if (!e.target.matches('.sel-teacher')) return;
-        const li = e.target.closest('li.conflict-row');
-        if (!li) return;
-        const selB = li.querySelector('select.sel-branch');
-        const teacherBranches = (e.target.selectedOptions?.[0]?.dataset.branches || '').split('|').filter(Boolean);
-        const needed = (li.dataset.needed || '').split('|').filter(Boolean);
+    const bodyEl = dlg.querySelector('#autoAssignReportBody');
+    if (bodyEl && !bodyEl.dataset.autoAssignBound) {
+      bodyEl.dataset.autoAssignBound = '1';
+      bodyEl.addEventListener('change', handleTeacherChange);
+      bodyEl.addEventListener('click', handleReportClick);
+    }
 
-        let options = teacherBranches.filter(b => needed.includes(b));
-        let suffix = '';
-        if (options.length === 0) { options = teacherBranches.slice(); suffix = ' (ihtiyaç dışı)'; }
-        if (options.length === 0) { options = state.branches?.slice?.() || []; suffix = ' (tanımsız)'; }
-
-        selB.innerHTML = options.map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b+suffix)}</option>`).join('');
-      });
-
-      // Event delegation: "Ata"
-      bodyEl.addEventListener('click', (e) => {
-        if (!e.target.matches('.btn-assign-free')) return;
-        const li = e.target.closest('li.conflict-row');
-        if (!li) return;
-
-        const gid = li.dataset.gid;
-        const d = +li.dataset.day;
-        const s = +li.dataset.slot;
-        const selT = li.querySelector('select.sel-teacher');
-        const selB = li.querySelector('select.sel-branch');
-
-        const tid = selT?.value;
-        let branch = selB?.value || '';
-
-        if (!tid) { alert('Lütfen öğretmen seçiniz.'); return; }
-        if (!branch) {
-          const tBranches = (selT.selectedOptions?.[0]?.dataset.branches || '').split('|').filter(Boolean);
-          const needed = (li.dataset.needed || '').split('|').filter(Boolean);
-          const inter = tBranches.filter(b => needed.includes(b));
-          branch = inter[0] || tBranches[0] || state.branches?.[0] || 'GENEL';
-        }
-
-        const ok = performManualAssign(gid, d, s, tid, branch);
-        if (!ok) return;
-
-        const base = +(dlg.dataset.baseAssigned || state.assignments.length);
-        const refreshed = buildAutoAssignReport(base);
-        renderReportBody(refreshed); // modal açık kalır
-      });
+    const panelBody = document.getElementById('assignAnalysisBody');
+    if (panelBody && !panelBody.dataset.autoAssignBound) {
+      panelBody.dataset.autoAssignBound = '1';
+      panelBody.addEventListener('change', handleTeacherChange);
+      panelBody.addEventListener('click', handleReportClick);
     }
 
     renderReportBody(report);
     if (!dlg.open) dlg.showModal();
 
-    // İçerik render'ı
+    // Öğretmen değişince branş listesini uygun şekilde daralt
+    function handleTeacherChange(e) {
+      if (!e.target.matches('.sel-teacher')) return;
+      const li = e.target.closest('li.conflict-row');
+      if (!li) return;
+      const selB = li.querySelector('select.sel-branch');
+      const teacherBranches = (e.target.selectedOptions?.[0]?.dataset.branches || '').split('|').filter(Boolean);
+      const needed = (li.dataset.needed || '').split('|').filter(Boolean);
+
+      let options = teacherBranches.filter(b => needed.includes(b));
+      let suffix = '';
+      if (options.length === 0) { options = teacherBranches.slice(); suffix = ' (ihtiyaç dışı)'; }
+      if (options.length === 0) { options = (state.branches || []).slice?.() || []; suffix = ' (tanımsız)'; }
+
+      selB.innerHTML = options.map(b =>
+        `<option value="${escapeAttr(String(b))}">${escapeHtml(String(b) + suffix)}</option>`
+      ).join('');
+    }
+
+    // Hem modal gövdesi hem TAP analizi kartı için ortak click handler
+    function handleReportClick(e) {
+      const openBtn = e.target.closest('.btn-open-slot');
+      if (openBtn) {
+        const li = openBtn.closest('[data-gid][data-day][data-slot]');
+        if (li) {
+          const gid = li.dataset.gid;
+          const d = +li.dataset.day;
+          const s = +li.dataset.slot;
+          openAssignDialog(gid, d, s);
+        }
+        return;
+      }
+
+      const assignBtn = e.target.closest('.btn-assign-free');
+      if (!assignBtn) return;
+      const li = assignBtn.closest('li.conflict-row');
+      if (!li) return;
+
+      const gid = li.dataset.gid;
+      const d = +li.dataset.day;
+      const s = +li.dataset.slot;
+      const selT = li.querySelector('select.sel-teacher');
+      const selB = li.querySelector('select.sel-branch');
+
+      const tid = selT?.value;
+      let branch = selB?.value || '';
+
+      if (!tid) {
+        alert('Lütfen öğretmen seçiniz.');
+        return;
+      }
+      if (!branch) {
+        const tBranches = (selT.selectedOptions?.[0]?.dataset.branches || '').split('|').filter(Boolean);
+        const needed = (li.dataset.needed || '').split('|').filter(Boolean);
+        const inter = tBranches.filter(b => needed.includes(b));
+        branch = inter[0] || tBranches[0] || state.branches?.[0] || 'GENEL';
+      }
+
+      const ok = performManualAssign(gid, d, s, tid, branch);
+      if (!ok) return;
+
+      const base = +(dlg.dataset.baseAssigned || state.assignments.length);
+      const refreshed = buildAutoAssignReport(base);
+      renderReportBody(refreshed);
+    }
+
+    // İçerik render'ı (modal + TAP kartını birlikte doldurur)
     function renderReportBody(rep) {
-      const el = document.querySelector('#dlgAutoAssignReport #autoAssignReportBody');
-      const t = rep.totals, r = rep.reasons;
+      const t = rep.totals || {};
+      const reasons = rep.reasons || {};
+      const details = rep.details || [];
+      const teacherStats = rep.teacherStats || [];
 
-      if (!dlg.dataset.baseAssigned) dlg.dataset.baseAssigned = String(t.totalAssigned);
+      if (!dlg.dataset.baseAssigned && typeof t.totalAssigned === 'number') {
+        dlg.dataset.baseAssigned = String(t.totalAssigned);
+      }
 
-      const fmtSlot = (d,s) => {
-        const day = state.program.days[d];
-        const lbl = state.program.slotLabels?.[s] || `${s+1}. saat`;
-        return `${day} • ${lbl}`;
+      const fmtSlot = (day, slot) => {
+        const dayName = state.program.days?.[day] ?? `Gün ${day + 1}`;
+        const slotLabel = (state.program.slotLabels && state.program.slotLabels[slot]) || `${slot + 1}. saat`;
+        return `${dayName} • ${slotLabel}`;
       };
 
-      const topBranchSuggestions = rep.details
+      // Genel özet
+      const totalsHtml = (() => {
+        const eff = t.effectiveCapacity || 0;
+        const ta = t.totalAssigned || 0;
+        const pct = eff > 0 ? Math.round(100 * ta / eff) : 0;
+        const newly = typeof t.newlyAssigned === 'number' ? t.newlyAssigned : 0;
+        const emptyAvail = t.emptyOnAvailable || 0;
+        return `
+          <div class="card mini no-print" style="padding:10px 12px;margin-bottom:10px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none">
+            <div style="font-weight:700;margin-bottom:4px;">Genel Özet</div>
+            <div class="mini2">
+              Toplam <b>${t.groups || 0}</b> grup, <b>${t.days || 0}</b> gün, günde <b>${t.slotsPerDay || 0}</b> saat.<br/>
+              Etkin kapasite: <b>${eff}</b> hücre<br/>
+              Atanan ders: <b>${ta}</b> (bu otomatik atamada eklenen: ${newly >= 0 ? newly : 0})<br/>
+              Müsaitken boş kalan: <b>${emptyAvail}</b> hücre
+              ${eff > 0 ? `<br/>Doluluk: <b>%${pct}</b>` : ''}
+            </div>
+          </div>`;
+      })();
+
+      // Sebep kırılımı
+            const reasonEntries = Object.entries(reasons || {})
+        .map(([code, val]) => {
+          const count = typeof val === 'number'
+            ? val
+            : (val && typeof val.count === 'number' ? val.count : 0);
+          return [code, count];
+        })
+        .filter(([, count]) => count > 0)
+        .sort((a, b) => b[1] - a[1]);
+
+      const reasonLabels = {
+        grup_musait_degildi: 'Grup o saatte derse müsait değildi.',
+        talep_kalmadi: 'Grubun o saatte ders talebi kalmamıştı.',
+        ogretmen_yok_veya_mecbur_cakisiyor: 'Çakışmalar / öncelikler nedeniyle yerleşemedi.'
+      };
+
+      const reasonsHtml = reasonEntries.length ? `
+        <div class="card mini" style="padding:10px 12px;margin-bottom:10px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none">
+          <div style="font-weight:700;margin-bottom:4px;">Boş Kalan Hücre Nedenleri</div>
+          <ul class="mini2" style="margin:0;padding-left:16px;">
+            ${reasonEntries.map(([code, count]) => `
+              <li>
+                <b>${count}</b> hücre – ${escapeHtml(reasonLabels[code] || code)}
+              </li>
+            `).join('')}
+          </ul>
+        </div>` : '';
+
+// Öne çıkan kombinasyon önerileri
+      const branchItems = details
         .filter(x => x.reason === 'uygun_kombo_var_ama_yerlesmedi')
-        .slice(0, 10)
-        .map(x => {
-          const br = x.suggestion[0];
-          const teacherList = Array.isArray(br?.teachers) ? br.teachers.join(', ') : '';
-          return `<li><b>${escapeHtml(String(x.group))}</b> — ${escapeHtml(fmtSlot(x.day,x.slot))} → <b>${escapeHtml(br.branch)}</b> (${escapeHtml(teacherList)})</li>`;
-        }).join('');
+        .slice(0, 8);
 
-      // Çakışan slotlar için interaktif liste + İHTİYAÇ DERS ADI (yalnız isim)
-      const conflictRows = rep.details
-        .filter(x => x.reason === 'ogretmen_yok_veya_mecbur_cakisiyor')
-        .slice(0, MAX_CONFLICT_ROWS_IN_UI)
-        .map(x => {
-          const teacherOpts = (x.freeTeachers||[])
-            .map(t => {
-              const branches = (t.branches || []).map(b => String(b)).join('|');
-              const label = `${t.name || t.id}${t.branches?.length ? ' ('+t.branches.join(', ')+')' : ''}`;
-              return `<option value="${escapeHtml(String(t.id))}" data-branches="${escapeAttr(branches)}">${escapeHtml(label)}</option>`;
-            }).join('');
-          const neededPipe = (x.neededBranches||[]).map(b => String(b)).join('|');
+      const branchHtml = branchItems.length ? `
+        <div class="card mini" style="padding:10px 12px;margin-bottom:10px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none">
+          <div style="font-weight:700;margin-bottom:4px;">Öne Çıkan Kombinasyon Önerileri</div>
+          <ul class="mini2" style="margin:0;padding-left:16px;">
+            ${branchItems.map(x => {
+              const gName = state.groups[x.group]?.name || x.group;
+              const when = fmtSlot(x.day, x.slot);
+              const s = (x.suggestion || []).map(br => {
+                const tList = (br.teachers || []).join(', ');
+                return `${br.branch}: ${tList}`;
+              }).join(' • ');
+              return `
+                <li>
+                  <b>${escapeHtml(gName)}</b> – ${escapeHtml(when)}:
+                  ${escapeHtml(s || 'Öneri bulunamadı')}
+                </li>`;
+            }).join('')}
+          </ul>
+        </div>` : '';
 
-          const firstTeacherBranches = (x.freeTeachers?.[0]?.branches || []).map(b => String(b));
-          const interDefault = firstTeacherBranches.filter(b => (x.neededBranches||[]).includes(b));
-          const defaultBranchOpts = (interDefault.length ? interDefault : firstTeacherBranches)
-            .map(b => `<option value="${escapeHtml(b)}">${escapeHtml(b + (interDefault.length ? '' : ' (ihtiyaç dışı)'))}</option>`)
-            .join('') || `<option value="">(branş yok)</option>`;
+      // Çakışma kaynaklı, öğretmen boşken atanamayan slotlar
+      const allConflictRows = details
+        .filter(x => x.reason === 'ogretmen_yok_veya_mecbur_cakisiyor' && (x.freeTeachers || []).length > 0)
+        .sort((a, b) => (a.day - b.day) || (a.slot - b.slot));
 
-          const topNeed = (x.neededBranches && x.neededBranches[0]) ? String(x.neededBranches[0]) : '';
+      const conflictRows = allConflictRows.slice(0, MAX_CONFLICT_ROWS_IN_UI);
+
+      const conflictHtml = conflictRows.length ? (() => {
+        const rowsHtml = conflictRows.map(x => {
+          const gid = x.group;
+          const gName = state.groups[gid]?.name || gid;
+          const when = fmtSlot(x.day, x.slot);
+          const needed = x.neededBranches || [];
+          const neededStr = needed.length ? needed.join(', ') : 'Branş serbest';
+
+          const freeTs = (x.freeTeachers || []).slice().sort((a, b) =>
+            String(a.name || '').localeCompare(String(b.name || ''), 'tr')
+          );
+          const first = freeTs[0];
+
+          const teacherOpts = freeTs.map(t => {
+            const branches = (t.branches || []).join('|');
+            return `<option value="${escapeAttr(String(t.id))}" data-branches="${escapeAttr(branches)}">${escapeHtml(t.name)}</option>`;
+          }).join('');
+
+          let branchOpts = '';
+          if (first) {
+            const tBranches = (first.branches || []);
+            const inter = needed.length ? tBranches.filter(b => needed.includes(b)) : tBranches.slice();
+            const baseList = inter.length ? inter : tBranches;
+            branchOpts = baseList.map(b =>
+              `<option value="${escapeAttr(String(b))}">${escapeHtml(String(b))}</option>`
+            ).join('');
+          }
+
+          const neededPipe = needed.join('|');
 
           return `
-            <li class="conflict-row" data-gid="${escapeAttr(String(x.group))}" data-day="${x.day}" data-slot="${x.slot}" data-needed="${escapeAttr(neededPipe)}" style="margin:6px 0">
-              <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between">
-                <div style="display:flex;gap:8px;align-items:center;min-width:300px">
-                  <div><b>${escapeHtml(String(x.group))}</b> — ${escapeHtml(fmtSlot(x.day,x.slot))}</div>
-                  ${topNeed ? `<span class="need-chip" title="İhtiyaç" style="padding:2px 8px;border-radius:999px;background:#eee;font-size:12px;line-height:1.6">${escapeHtml(topNeed)}</span>` : ``}
-                </div>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
-                  <label>Öğretmen:
-                    <select class="sel-teacher" style="min-width:220px">
-                      <option value="">Seçiniz</option>
-                      ${teacherOpts}
-                    </select>
-                  </label>
-                  <label>Branş:
-                    <select class="sel-branch" style="min-width:160px">
-                      ${defaultBranchOpts}
-                    </select>
-                  </label>
-                  <button class="btn btn-assign-free">Ata</button>
-                </div>
+            <li class="conflict-row"
+                data-gid="${escapeAttr(String(gid))}"
+                data-day="${x.day}"
+                data-slot="${x.slot}"
+                data-needed="${escapeAttr(neededPipe)}"
+                style="padding:6px 0;border-bottom:1px solid #e5e7eb;">
+              <div><b>${escapeHtml(gName)}</b> – ${escapeHtml(when)}</div>
+              <div class="mini2 muted">İhtiyaç: ${escapeHtml(neededStr)}</div>
+              <div class="flex" style="gap:6px;align-items:center;margin-top:4px;flex-wrap:wrap;">
+                <select class="sel-teacher">
+                  <option value="">Öğretmen seçiniz</option>
+                  ${teacherOpts}
+                </select>
+                <select class="sel-branch">
+                  ${branchOpts}
+                </select>
+                <button type="button" class="btn xs ghost btn-assign-free">Ata</button>
+                <button type="button" class="btn xs ghost btn-open-slot">Detay / Manuel</button>
               </div>
             </li>`;
         }).join('');
 
-      el.innerHTML = `
-        <div class="grid" style="gap:8px">
-          <div class="pill">Toplam Atama: <b>${t.totalAssigned}</b> • Bu oturumda yeni: <b>${t.newlyAssigned}</b></div>
-          <div class="pill">Etkin Kapasite (grup müsait): <b>${t.effectiveCapacity}</b> • Boş (etkin): <b>${t.emptyOnAvailable}</b></div>
-          <div class="pill">Bloklu (grup müsait değil): <b>${t.blockedByGroup}</b> • Tüm Boş: <b>${t.emptyAll}</b></div>
-
-          <div class="card">
-            <h3>Sebep Kırılımı</h3>
-            <ul style="margin:6px 0 0 18px">
-              <li>Grup müsait değildi: <b>${r.grup_musait_degildi}</b></li>
-              <li>Talep kalmadı: <b>${r.talep_kalmadi}</b></li>
-              <li>Öğretmen yok / mecbur çakışıyor: <b>${r.ogretmen_yok_veya_mecbur_cakisiyor}</b></li>
+        return `
+          <div class="card mini" style="padding:10px 12px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none;margin-top:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+              <div>
+                <div style="font-weight:700;margin-bottom:2px;">Atanabilecek Boş Slotlar</div>
+                <div class="mini2 muted">
+                  Öğretmen boş olduğu halde ders yazılmamış hücreler. Buradan hızlıca atama yapabilirsin.
+                </div>
+              </div>
+              <div class="mini2 muted nowrap">
+                Gösterilen ilk ${conflictRows.length} / ${allConflictRows.length} hücre
+              </div>
+            </div>
+            <ul class="mini2" style="margin:8px 0 0;padding-left:0;list-style:none;">
+              ${rowsHtml}
             </ul>
-          </div>
+          </div>`;
+      })() : `
+        <div class="card mini" style="padding:10px 12px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none;margin-top:10px;">
+          <div style="font-weight:700;margin-bottom:4px;">Atanabilecek Boş Slotlar</div>
+          <div class="mini2 muted">Öğretmen boş olduğu halde atanabilecek özel bir hücre bulunamadı.</div>
+        </div>`;
 
-          <div class="card">
-            <h3>Boş Slotlar için Branşa Uygun Öneriler (İlk 10)</h3>
-            ${topBranchSuggestions ? `<ol style="margin:6px 0 0 18px">${topBranchSuggestions}</ol>`
-                                   : `<div class="muted">Bu turda branş bazlı eşleşme önerisi oluşmadı.</div>`}
-          </div>
+      // Öğretmen bazlı özet
+      const teacherHtml = (() => {
+        if (!teacherStats.length) return '';
 
-          <div class="card">
-            <h3>Atanamayan (Çakışma) Slotlar: Branş Farketmez Öğretmen Seç–Ata</h3>
-            ${conflictRows ? `<ol style="margin:6px 0 0 18px">${conflictRows}</ol>`
-                           : `<div class="muted">Çakışma kaynaklı atanamayan slot kalmadı.</div>`}
-            <div class="muted" style="margin-top:6px">Not: Öğretmen/branş seçip <b>Ata</b> dediğinizde modal kapanmadan liste güncellenir.</div>
+        const cards = teacherStats.map(ts => {
+          const groups = (ts.groups || []).map(gid => state.groups[gid]?.name || gid)
+            .sort((a, b) => a.localeCompare(b, 'tr'));
+          const pot = ts.potentialSlots || [];
+          const best = pot.slice(0, 4);
+
+          const potHtml = best.length ? `
+            <ul class="mini2" style="margin:4px 0 0 0;padding-left:16px;">
+              ${best.map(ps => {
+                const gName = state.groups[ps.group]?.name || ps.group;
+                const when = fmtSlot(ps.day, ps.slot);
+                const badge = ps.neededBranches && ps.neededBranches.length
+                  ? `İhtiyaç: ${ps.neededBranches.join(', ')}`
+                  : (ps.suggestedBranch ? `Önerilen branş: ${ps.suggestedBranch}` : '');
+                return `
+                  <li data-gid="${escapeAttr(String(ps.group))}" data-day="${ps.day}" data-slot="${ps.slot}">
+                    <button type="button" class="btn xs ghost btn-open-slot">
+                      ${escapeHtml(gName)} – ${escapeHtml(when)}
+                      ${badge ? ` · ${escapeHtml(badge)}` : ''}
+                    </button>
+                  </li>`;
+              }).join('')}
+              ${pot.length > best.length
+                ? `<li class="mini2 muted" style="margin-top:2px;">… ve ${pot.length - best.length} başka fırsat.</li>`
+                : ''}
+            </ul>` :
+            `<div class="mini2 muted" style="margin-top:4px;">
+              Şu anda bu öğretmen için doğrudan doldurulacak boş saat önerisi yok.
+            </div>`;
+
+          return `
+            <div style="padding:8px 10px;border-radius:12px;border:1px solid #e2e8f0;margin-bottom:6px;">
+              <div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
+                <div>
+                  <b>${escapeHtml(ts.name || '')}</b>
+                  ${ts.branch ? `<span class="mini2">— ${escapeHtml(ts.branch)}</span>` : ''}
+                </div>
+                <div class="mini2 muted">
+                  <span class="pill" style="margin-right:4px;">${ts.totalLessons || 0} ders</span>
+                  ${groups.length
+                    ? `<span>Gruplar: ${escapeHtml(groups.join(', '))}</span>`
+                    : '<span>Henüz ataması yok</span>'}
+                </div>
+              </div>
+              ${potHtml}
+            </div>`;
+        }).join('');
+
+        return `
+          <div class="card mini" style="padding:10px 12px;border-radius:12px;border:1px solid #e2e8f0;box-shadow:none;margin-top:8px;">
+            <div style="font-weight:700;margin-bottom:4px;">Öğretmen Bazlı Özet</div>
+            <div class="mini2 muted" style="margin-bottom:4px;">
+              Her öğretmenin girdiği ders sayısını ve boş saatlerinde hangi gruplara ders yazılabileceğini gösterir.
+              Butonlara tıklayarak ilgili slotu Manuel Atama penceresinden açabilirsin.
+            </div>
+            ${cards}
+          </div>`;
+      })();
+
+      const html = `
+        <div style="display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.3fr);gap:14px;align-items:flex-start;">
+          <div>
+            ${totalsHtml}
+            ${teacherHtml}
           </div>
-        </div>
-      `;
+          <div>
+            ${reasonsHtml}
+            ${branchHtml}
+            ${conflictHtml}
+          </div>
+        </div>`;
+
+      const dlgBody = document.querySelector('#dlgAutoAssignReport #autoAssignReportBody');
+      if (dlgBody) dlgBody.innerHTML = html;
+
+      const panelBody2 = document.getElementById('assignAnalysisBody');
+      const panelCard = document.getElementById('assignAnalysis');
+      if (panelBody2) {
+        panelBody2.innerHTML = html;
+        if (panelCard) panelCard.hidden = false;
+      }
     }
   }
+
 
   // Mini utils — XSS'e karşı kaçış
   function escapeHtml(s) {
