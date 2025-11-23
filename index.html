@@ -357,23 +357,24 @@
 
   /* Yazdırma */
   @media print{
-    @page{size:A4;margin:12mm}
+    @page{size:A4;margin:10mm}
     body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .no-print{display:none !important}
     .printable{display:block}
     .print-header{font-weight:900;text-align:center;margin-bottom:6px}
     .print-sub{color:#475569;text-align:center;margin-bottom:8px}
     .print-page{page-break-after:always;break-after:page}
-    .print-table{width:100%;border-collapse:collapse;font-size:10.8px}
-    .print-table th,.print-table td{border:1px solid #0f172a;padding:5px 6px;vertical-align:top}
+    /* Increased font-size for print clarity */
+    .print-table{width:100%;border-collapse:collapse;font-size:11px}
+    .print-table th,.print-table td{border:1px solid #000;padding:5px 6px;vertical-align:top}
     .print-table thead th{background:#f3f4f6}
-    .tight th,.tight td{padding:4px 5px;font-size:10.2px}
+    .tight th,.tight td{padding:4px 5px;font-size:10.5px}
     .avoid-break{page-break-inside:avoid;break-inside:avoid}
     .students-2col{columns:2;column-gap:12px}
     .students-2col ul{margin:0;padding-left:0;list-style:none}
     .students-2col li{break-inside:avoid;padding:2px 0;border-bottom:1px dotted #94a3b8}
     .att-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px}
-    .att-table th,.att-table td{border:1px solid #0f172a;padding:3px 4px;text-align:center}
+    .att-table th,.att-table td{border:1px solid #000;padding:3px 4px;text-align:center}
     .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
 
@@ -1307,6 +1308,33 @@ function teacherCapacity(tid) {
   return total;
 }
 
+/**
+ * Calculate how many lesson slots a teacher is available for based on the
+ * current availability matrix. Each true entry in state.availability.teachers
+ * counts as one potential lesson the teacher could teach. This is used in
+ * the manual assignment panel to show a teacher's capacity (müsaitlik) to
+ * take on lessons as opposed to the total requested lesson count. Without
+ * this helper the UI displayed confusing large numbers like 24 or 26. The
+ * user explicitly requested that the availability count and the active
+ * assignment count be shown next to each teacher in the manual assignment
+ * panel.
+ * @param {string} tid - teacher ID
+ * @returns {number} number of available slots for this teacher
+ */
+function teacherAvailabilityCount(tid) {
+  const avail = state.availability?.teachers?.[tid] || [];
+  const D = state.program?.days?.length || 0;
+  const S = state.program?.slots || 0;
+  let total = 0;
+  for (let d = 0; d < D; d++) {
+    const row = avail[d] || [];
+    for (let s = 0; s < S; s++) {
+      if (row[s] === true) total++;
+    }
+  }
+  return total;
+}
+
 function fillTeachersForBranch(){
   const branch = $("#dlgBranch").value;
   const {day, slot} = dlgCtx || {};
@@ -1323,10 +1351,13 @@ function fillTeachersForBranch(){
     const opt = document.createElement('option');
     opt.value = t.id;
 
-    // Determine capacity and current assignment count
+    // Determine how many slots the teacher is available for and currently assigned
     const totalAssigned = (assignMap.get(t.id) || []).length;
-    const cap = teacherCapacity(t.id);
-    const countLabel = `(${totalAssigned}/${cap})`;
+    const availCount = teacherAvailabilityCount(t.id);
+
+    // Build label showing availability and active assignment counts
+    // Format: (müsaitlik / atama) e.g. (10/3)
+    const countLabel = `(${availCount}/${totalAssigned})`;
 
     if (ok) {
       // Teacher is available; display counts next to name
