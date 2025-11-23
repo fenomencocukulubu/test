@@ -392,17 +392,6 @@
   min-width: 280px;
 }
 </style>
-<!-- Override print styles for improved readability and print quality -->
-<style>
-@media print{
-  /* Increase spacing and font sizes on printed schedules */
-  .print-header{margin-bottom:8px !important;}
-  .print-sub{margin-bottom:10px !important;}
-  .print-table{font-size:11px !important;}
-  .print-table thead th{font-weight:700 !important;}
-  .tight th,.tight td{font-size:10.5px !important;}
-}
-</style>
 </head>
 <body>
 <div class="app">
@@ -679,33 +668,10 @@ const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 // lightness and saturation values are tuned for good contrast while keeping
 // the colors soft. A slightly darker border color is also produced to
 // delineate the cells.
-// Predefined pastel color palette for each branch. Users explicitly requested
-// consistent and distinct colors per course (branch) in the assignment panel.
-// If a branch is not in this map a fallback deterministic pastel will be used.
-const BRANCH_COLOR_MAP = {
-  'FEN BİLİMLERİ': '#fde68a',     // soft yellow for science
-  'MATEMATİK': '#bfdbfe',         // light blue for mathematics
-  'TÜRKÇE': '#bbf7d0',            // mint green for Turkish language
-  'SOSYAL BİLGİLER': '#f0abfc',   // pale purple for social studies
-  'İNGİLİZCE': '#ddd6fe',         // lavender for English
-  'DİN KÜLTÜRÜ': '#fecdd3'        // light pink for religion & culture
-};
-const BRANCH_BORDER_COLOR_MAP = {
-  'FEN BİLİMLERİ': '#fbbf24',
-  'MATEMATİK': '#60a5fa',
-  'TÜRKÇE': '#34d399',
-  'SOSYAL BİLGİLER': '#d946ef',
-  'İNGİLİZCE': '#a78bfa',
-  'DİN KÜLTÜRÜ': '#fda4af'
-};
-
 const branchColorCache = {};
 function getColorForBranch(branch) {
-  // Use predefined palette if available
   if (!branch) return null;
-  if (BRANCH_COLOR_MAP.hasOwnProperty(branch)) return BRANCH_COLOR_MAP[branch];
   if (branchColorCache[branch]) return branchColorCache[branch];
-  // Fallback: generate deterministic pastel color from branch name
   let sum = 0;
   for (let i = 0; i < branch.length; i++) {
     sum = (sum + branch.charCodeAt(i)) & 0xffff;
@@ -717,8 +683,6 @@ function getColorForBranch(branch) {
 }
 function getBorderColorForBranch(branch) {
   if (!branch) return null;
-  // Use predefined border palette if available
-  if (BRANCH_BORDER_COLOR_MAP.hasOwnProperty(branch)) return BRANCH_BORDER_COLOR_MAP[branch];
   let sum = 0;
   for (let i = 0; i < branch.length; i++) {
     sum = (sum + branch.charCodeAt(i)) & 0xffff;
