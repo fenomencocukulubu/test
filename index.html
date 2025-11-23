@@ -396,6 +396,55 @@
 #dlgAssign select {
   min-width: 280px;
 }
+  /* === DERS RENK PALETİ === */
+/* Varsayılan atama rengi (Tanımsız dersler için) */
+.kcell.assigned {
+    background-color: #f1f5f9;
+    border-color: #cbd5e1;
+    color: #0f172a;
+}
+
+/* MATEMATİK: Mavi Tonları */
+.kcell.assigned.mat {
+    background-color: #eff6ff; /* Çok açık mavi */
+    border-color: #93c5fd;     /* Mavi kenarlık */
+    color: #1e3a8a;            /* Koyu mavi yazı */
+}
+
+/* FEN BİLİMLERİ: Yeşil Tonları */
+.kcell.assigned.fen {
+    background-color: #f0fdf4;
+    border-color: #86efac;
+    color: #14532d;
+}
+
+/* TÜRKÇE: Turuncu Tonları */
+.kcell.assigned.trk {
+    background-color: #fff7ed;
+    border-color: #fdba74;
+    color: #7c2d12;
+}
+
+/* SOSYAL BİLGİLER: Cam Göbeği/Turkuaz */
+.kcell.assigned.sos {
+    background-color: #ecfeff;
+    border-color: #67e8f9;
+    color: #155e75;
+}
+
+/* İNGİLİZCE: Sarı/Limon */
+.kcell.assigned.ing {
+    background-color: #fefce8;
+    border-color: #fde047;
+    color: #854d0e;
+}
+
+/* DİN KÜLTÜRÜ: Mor/Lila */
+.kcell.assigned.din {
+    background-color: #faf5ff;
+    border-color: #d8b4fe;
+    color: #581c87;
+}
 </style>
 </head>
 <body>
@@ -639,17 +688,6 @@
 const ALLOWED_BRANCHES = [
   'FEN BİLİMLERİ','MATEMATİK','TÜRKÇE','SOSYAL BİLGİLER','İNGİLİZCE','DİN KÜLTÜRÜ'
 ];
-
-// Ders -> CSS sınıfı kısaltması (renkli hücreler için)
-const BRANCH_CLASS = {
-  'MATEMATİK':'mat',
-  'FEN BİLİMLERİ':'fen',
-  'TÜRKÇE':'trk',
-  'SOSYAL BİLGİLER':'sos',
-  'İNGİLİZCE':'ing',
-  'DİN KÜLTÜRÜ':'din'
-};
-const bcls = b => 'b-' + (BRANCH_CLASS[b] || toId(b));
 const state = {
   teachers: [], students: [], groups: {}, branches: [],
   program: { days:["Pazartesi","Salı","Çarşamba","Perşembe","Cuma"], slots:8, slotLabels:[], cells:{} },
@@ -1184,7 +1222,20 @@ function prevGroupSubject(groupId, day, slot){
   return null;
 }
 function hasAssignmentsForGroup(gid){ return state.assignments.some(a=>a.group===gid); }
-function renderAssignCards(){
+/* Branş ismini CSS sınıfına çeviren yardımcı */
+function getBranchClass(branchName) {
+    if (!branchName) return '';
+    const b = branchName.toUpperCase();
+    if (b.includes('MATEMATİK')) return 'mat';
+    if (b.includes('FEN')) return 'fen';
+    if (b.includes('TÜRKÇE')) return 'trk';
+    if (b.includes('SOSYAL')) return 'sos';
+    if (b.includes('İNGİLİZCE')) return 'ing';
+    if (b.includes('DİN')) return 'din';
+    return ''; // Tanımsızsa varsayılan gri kalır
+}
+  
+  function renderAssignCards(){
   const wrap = $("#assignCards"); wrap.innerHTML='';
   const days = state.program.days, S=state.program.slots;
 
@@ -1220,17 +1271,27 @@ function renderAssignCards(){
         // Mevcut bir atama var mı? Varsa hücreyi ders rengine dönüştür.
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
         if (cur) {
-          // Atanmış hücrelerde hazır uygunluk sınıflarını kaldır, böylece arka plan
-          // tamamen ders rengiyle kaplanır. Ardından yeni 'assigned' sınıfını ekle.
-          cell.classList.remove('ok', 'bad', 'busy');
-          cell.classList.add('assigned', bcls(cur.branch));
-          // Ders rengi CSS sınıfına göre boyanır; inline renk değerleri temizlenir.
-          cell.style.backgroundColor = '';
-          cell.style.borderColor = '';
-          // Hücrenin içeriğini ders adı ve öğretmen bilgisi ile doldur.
-          const teacherName = state.teachers.find(t => t.id === cur.teacherId)?.name || '';
-          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${teacherName}</div></div>`;
-        }
+    // 1. Eski durum sınıflarını temizle
+    cell.classList.remove('ok', 'bad', 'busy');
+    
+    // 2. 'assigned' sınıfını ve branşa özel renk sınıfını ekle
+    // Not: getBranchClass fonksiyonunu yukarıda tanımladığımızı varsayıyoruz
+    cell.classList.add('assigned', getBranchClass(cur.branch));
+    
+    // 3. İçeriği yaz
+    const teacherName = state.teachers.find(t => t.id === cur.teacherId)?.name || '';
+    
+    // İpucu: İçerik çok uzunsa taşmaması için overflow hidden ekleyebilirsiniz,
+    // ama boyut değişmemesi için stil aynı kalmalı.
+    cell.innerHTML = `
+      <div style="text-align:center; pointer-events:none;">
+        <div style="font-size:0.95em; line-height:1.2;"><b>${cur.branch}</b></div>
+        <div class="mini2" style="margin-top:2px;">👤 ${teacherName}</div>
+      </div>`;
+      
+    // ÖNEMLİ: Eğer kodunuzda cell.style.backgroundColor = ... yapan bir satır varsa onu SİLİN.
+    // Rengi CSS'ten alması için inline style olmamalıdır.
+}
         cell.onclick = () => {
           openAssignDialog(g.id, d, s);
         };
@@ -2111,7 +2172,7 @@ function renderPrintPreview(){
         for(let s=0; s<S; s++){
           const a = aForG.find(x=>x.day===di && x.slot===s);
           const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : '';
-          row += `<td class="${a ? bcls(a.branch) : ''}">${txt}</td>`;
+          row += `<td>${txt}</td>`;
         }
         row+='</tr>'; body+=row;
       });
@@ -2142,7 +2203,7 @@ function renderPrintPreview(){
         let row=`<tr><td><b>${days[d]}</b></td>`;
         for(let s=0; s<S; s++){
           const a = aForT.find(x=>x.day===d && x.slot===s);
-          row += a ? `<td class="${bcls(a.branch)}" style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
+          row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
         }
         row+='</tr>'; body+=row;
       });
@@ -2269,46 +2330,10 @@ buildProgramGrid(true);
 renderSlotLabels();
 showTopTab('step1');
 </script>
-
 <style>
-/* Ders renk paleti ve atama hücresi renkleri */
-:root{
-  --b-mat:#e6e8ff; /* Matematik */
-  --b-fen:#d6f7e9; /* Fen Bilimleri */
-  --b-trk:#ffe8d6; /* Türkçe */
-  --b-sos:#d8f6fb; /* Sosyal Bilgiler */
-  --b-ing:#e3f9e9; /* İngilizce */
-  --b-din:#ece7ff; /* Din Kültürü */
-}
+:root{ /* ders paleti */ --b-mat:#6366f1; /* Matematik */ --b-fen:#10b981; /* Fen Bilimleri */ --b-trk:#f97316; /* Türkçe */ --b-sos:#06b6d4; /* Sosyal Bilgiler */ --b-ing:#22c55e; /* İngilizce */ --b-din:#a78bfa; /* Din Kültürü */ /* tonlar */ --t-50: 14%; --t-150: 26%; --ring:#94a3b8; } /* üst sekmeler – daha modern görünüm */ .tabs{gap:8px;border:0;margin-bottom:10px;position:relative} .tabs:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:#e5e7eb} .tab{padding:12px 16px;border-radius:12px;background:#f1f5f9;font-weight:800;color:#0f172a;box-shadow:0 1px 0 #e5e7eb inset} .tab[aria-selected="true"]{background:#fff;border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(2,8,23,.06);} /* kartlar */ .card{border-radius:16px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 10px 25px rgba(15,23,42,.06)} .card header{font-weight:800;margin-bottom:8px} /* grid hücreleri – daha “takvim” hissi */ .kgrid[data-cols]{grid-template-columns:160px repeat(var(--cols), minmax(72px,1fr));} .kcell{position:relative;border:1px solid #e5e7eb;background:#fff;min-height:58px;border-radius:12px} .kcell:hover{outline:3px solid rgba(99,102,241,.08);outline-offset:0} .kcell .mini2{opacity:.9} /* atama yapılmış hücre */ .kcell.assigned{color:#0f172a;font-weight:700} .kcell.assigned .mini2{color:#111827;font-weight:600} /* ders renkleri (UI) */ .kcell.assigned.b-mat{ background:color-mix(in srgb, var(--b-mat) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-mat) var(--t-150), #fff); } .kcell.assigned.b-fen{ background:color-mix(in srgb, var(--b-fen) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-fen) var(--t-150), #fff); } .kcell.assigned.b-trk{ background:color-mix(in srgb, var(--b-trk) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-trk) var(--t-150), #fff); } .kcell.assigned.b-sos{ background:color-mix(in srgb, var(--b-sos) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-sos) var(--t-150), #fff); } .kcell.assigned.b-ing{ background:color-mix(in srgb, var(--b-ing) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-ing) var(--t-150), #fff); } .kcell.assigned.b-din{ background:color-mix(in srgb, var(--b-din) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-din) var(--t-150), #fff); } /* mini yoğunluk modu – istersen .app'a .dense ekle */ .app.dense .kcell{min-height:44px;padding:4px 6px;border-radius:10px} /* Yazdır: ders renklerinin hafif tonu ve okunabilirlik */ @media print{ .print-table td.b-mat { background:#e6e8ff; } .print-table td.b-fen { background:#d6f7e9; } .print-table td.b-trk { background:#ffe8d6; } .print-table td.b-sos { background:#d8f6fb; } .print-table td.b-ing { background:#e3f9e9; } .print-table td.b-din { background:#ece7ff; } .print-table td[class^="b-"], .print-table td[class*=" b-"]{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } .print-header{margin-bottom:10px} .print-sub{margin:8px 0 10px} } ``` > Not: mevcut print bloğun temelini koruyoruz, sadece tablo hücrelerine ders rengine göre arka plan veriyoruz. --- # 2) JS – Ders rengi sınıfı ekle & Yazdır hücrelerine sınıf bas Aşağıdaki yardımcıları `<script>` içinde bir yere (ör. global yardımcıların altı) ekle: ```js /* === Ders -> sınıf kısaltması (güvenli) === */ const BRANCH_CLASS = { 'MATEMATİK':'mat','FEN BİLİMLERİ':'fen','TÜRKÇE':'trk', 'SOSYAL BİLGİLER':'sos','İNGİLİZCE':'ing','DİN KÜLTÜRÜ':'din' }; const bcls = b => 'b-' + (BRANCH_CLASS[b] || toId(b)); ``` ## 2.a Atama panelinde renkli hücre `renderAssignCards()` içinde, atanmış hücre oluşturduğun bölümde şu değişikliği yap: **ÖNCE:** ```js if(cur){ cell.classList.add('busy'); cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div></div>`; } ``` **SONRA:** ```js if(cur){ cell.classList.add('assigned', bcls(cur.branch)); cell.innerHTML = `<div style="text-align:center"> <div><b>${cur.branch}</b></div> <div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div> </div>`; } ``` > Bu düzenleme, eski “busy” görselini ders rengine göre modern panele çevirir. ## 2.b Yazdır tablosunda renk sınıfı ver `renderPrintPreview()` içinde hücre HTML’lerini üretirken, `<td>`’lere ders sınıfını ekleyelim. **Grup görünümü** satır oluşturma kısmında (td içeriği üretilirken) bu satırı değiştir: ```js const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : ''; row += `<td>${txt}</td>`; ``` **şu hale getir:** ```js const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : ''; row += a ? `<td class="${bcls(a.branch)}">${txt}</td>` : `<td></td>`; ``` **Öğretmen görünümü** için de benzer şekilde: ```js row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`; ``` **yerine:** ```js row += a ? `<td class="${bcls(a.branch)}" style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`; ``` >
 
-/* Atama paneli: dersli hücreler */
-.kcell.assigned{
-  color:#0f172a;
-  font-weight:700;
-  border-width:1px;
-}
-.kcell.assigned.b-mat{ background:var(--b-mat); border-color:#c7ccff; }
-.kcell.assigned.b-fen{ background:var(--b-fen); border-color:#a6e9ce; }
-.kcell.assigned.b-trk{ background:var(--b-trk); border-color:#ffd0ae; }
-.kcell.assigned.b-sos{ background:var(--b-sos); border-color:#b7edf7; }
-.kcell.assigned.b-ing{ background:var(--b-ing); border-color:#c1f0d2; }
-.kcell.assigned.b-din{ background:var(--b-din); border-color:#d4ccff; }
-
-/* Yazdır görünümünde ders renkleri */
-@media print{
-  .print-table td.b-mat { background:var(--b-mat); }
-  .print-table td.b-fen { background:var(--b-fen); }
-  .print-table td.b-trk { background:var(--b-trk); }
-  .print-table td.b-sos { background:var(--b-sos); }
-  .print-table td.b-ing { background:var(--b-ing); }
-  .print-table td.b-din { background:var(--b-din); }
-  .print-table td[class^="b-"], .print-table td[class*=" b-"]{
-    -webkit-print-color-adjust:exact;
-    print-color-adjust:exact;
-  }
-}
 </style>
-
 <style>
   :root {
     --bg: #f0f4f8 !important;
