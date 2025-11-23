@@ -1287,26 +1287,50 @@ function getBranchClass(branchName) {
 
         // Mevcut bir atama var mı? Varsa hücreyi ders rengine dönüştür.
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
-      if (cur) {
+     if (cur) {
     // 1. Sınıfları temizle ve ders rengini ekle
     cell.classList.remove('ok', 'bad', 'busy');
-    // Not: getBranchClass fonksiyonunu eklediğinizi varsayıyorum
     cell.classList.add('assigned', getBranchClass(cur.branch));
 
     // 2. Öğretmen ismini veriden bul
-    // state.teachers içinde id eşleşmesi yapıyoruz
     const teacherObj = state.teachers.find(t => t.id === cur.teacherId);
-    const teacherName = teacherObj ? teacherObj.name : '(Öğretmen Yok)';
+    // İsim varsa al, yoksa boş string döndür (icon yanına boşluk gelmemesi için)
+    const teacherName = teacherObj ? teacherObj.name : '';
 
-    // 3. İçeriği yazdır (Alt alta sığacak şekilde ayarlandı)
+    // 3. İÇERİK HTML - GÜNCELLENDİ
     cell.innerHTML = `
-      <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; width:100%; pointer-events:none;">
+      <div style="
+          display:flex; 
+          flex-direction:column; 
+          justify-content:center; 
+          align-items:center; 
+          height:100%; 
+          width:100%; 
+          pointer-events:none; 
+          padding-bottom: 4px; /* Bu satır içeriği yukarı iter */
+      ">
         
-        <div style="font-weight:800; font-size:11px; line-height:1.1; margin-bottom:2px; text-align:center;">
+        <div style="
+            font-weight:900; 
+            font-size:14px; 
+            line-height:1; 
+            margin-bottom:3px; 
+            text-align:center; 
+            letter-spacing: -0.3px; /* Harfleri hafif sıkıştırarak sığdırır */
+        ">
             ${cur.branch}
         </div>
         
-        <div class="mini2" style="font-size:9px; font-weight:600; opacity:0.9; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%;">
+        <div class="mini2" style="
+            font-size:11px; 
+            font-weight:700; 
+            opacity:0.9; 
+            line-height:1; 
+            white-space:nowrap; 
+            overflow:hidden; 
+            text-overflow:ellipsis; 
+            max-width:98%;
+        ">
             👤 ${teacherName}
         </div>
 
@@ -3015,6 +3039,7 @@ function printTeachersV2(){
 
 </body>
 </html>
+
 
 
 
