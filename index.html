@@ -2414,27 +2414,37 @@ function computeBranchRequestsTotal(){
 }
 
 // === Başlık altı özet rozetler: {branş}: Kalan/Toplam (Kalan = Kapasite - Talep) ===
-// === Başlık altı özet rozetler: {branş}: Kalan/Toplam (Kalan = Kapasite - Talep) ===
 function renderBranchChipsSummary(){
   const host = document.getElementById('branchChips');
-  if(!host) return;
+  if (!host) return;
   host.innerHTML = '';
 
   const caps = computeBranchTeacherCapacity();
   const reqs = computeBranchRequestsTotal();
 
-  state.branches.forEach(b => {
-    const total = caps[b] || 0;
-    const used = reqs[b] || 0;
-    const left = Math.max(0, total - used);
+  state.branches.forEach(branch => {
+    const total = caps[branch] || 0;
+    const used  = reqs[branch] || 0;
+    const left  = Math.max(0, total - used);
 
     const chip = document.createElement('span');
     chip.className = 'pill' + (left <= 0 && total > 0 ? ' bad' : '');
-    chip.textContent = `${b} — ${left}/${total} müsait`;
+
+    const bg = getColorForBranch(branch);
+    const bd = getBorderColorForBranch(branch);
+
+    if (bg) chip.style.backgroundColor = bg;
+    if (bd) chip.style.borderColor = bd;
+    chip.style.borderWidth = '2px';
+    chip.style.borderStyle = 'solid';
+    chip.style.color = '#0f172a';
+    chip.style.fontWeight = '700';
+
+    chip.textContent = `${branch} — ${left}/${total} müsait`;
     host.appendChild(chip);
   });
 }
-
+  
 </script>
 <script>
 /* ==== Bağımsız: 7-8. sınıflar full liste yazdır ==== */
@@ -2925,5 +2935,4 @@ function printTeachersV2(){
 
 </body>
 </html>
-
 
