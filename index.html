@@ -1287,23 +1287,29 @@ function getBranchClass(branchName) {
 
         // Mevcut bir atama var mı? Varsa hücreyi ders rengine dönüştür.
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
-       if (cur) {
-    // Sınıfları temizle ve yenilerini ekle
+      if (cur) {
+    // 1. Sınıfları temizle ve ders rengini ekle
     cell.classList.remove('ok', 'bad', 'busy');
+    // Not: getBranchClass fonksiyonunu eklediğinizi varsayıyorum
     cell.classList.add('assigned', getBranchClass(cur.branch));
 
-    // Öğretmen adını al
-    const teacherName = state.teachers.find(t => t.id === cur.teacherId)?.name || '';
+    // 2. Öğretmen ismini veriden bul
+    // state.teachers içinde id eşleşmesi yapıyoruz
+    const teacherObj = state.teachers.find(t => t.id === cur.teacherId);
+    const teacherName = teacherObj ? teacherObj.name : '(Öğretmen Yok)';
 
-    // HTML İçeriği - Satır aralıkları (line-height) düşürüldü ve margin'ler sıfırlandı
+    // 3. İçeriği yazdır (Alt alta sığacak şekilde ayarlandı)
     cell.innerHTML = `
-      <div style="text-align:center; width:100%; pointer-events:none; overflow:hidden;">
-        <div style="font-size:13px; line-height:1.1; margin-bottom:2px;">
+      <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%; width:100%; pointer-events:none;">
+        
+        <div style="font-weight:800; font-size:11px; line-height:1.1; margin-bottom:2px; text-align:center;">
             ${cur.branch}
         </div>
-        <div class="mini2" style="font-size:10px; opacity:0.85; line-height:1;">
+        
+        <div class="mini2" style="font-size:9px; font-weight:600; opacity:0.9; line-height:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:95%;">
             👤 ${teacherName}
         </div>
+
       </div>`;
 }
         cell.onclick = () => {
@@ -3009,6 +3015,7 @@ function printTeachersV2(){
 
 </body>
 </html>
+
 
 
 
