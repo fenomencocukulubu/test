@@ -10,6 +10,18 @@
     --bg:#f6f9fb; --panel:#ffffff; --ink:#0f172a; --muted:#64748b;
     --pri:#14b8a6; --pri-ink:#083c3a; --acc:#6366f1; --warn:#f59e0b; --danger:#ef4444;
     --chip:#e2f5f2; --grid:#e5e7eb; --radius:16px;
+    /* Ders renkleri ve tonlamalar (branch palette) */
+    --b-mat:#6366f1; /* Matematik */
+    --b-fen:#10b981; /* Fen Bilimleri */
+    --b-trk:#f97316; /* Türkçe */
+    --b-sos:#06b6d4; /* Sosyal Bilgiler */
+    --b-ing:#22c55e; /* İngilizce */
+    --b-din:#a78bfa; /* Din Kültürü */
+    /* Ton karışım oranları (0-100) – renkleri yumuşatmak için */
+    --t-50:14%;
+    --t-150:26%;
+    /* Halka rengi */
+    --ring:#94a3b8;
   }
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Arial;}
@@ -50,6 +62,56 @@
   .kcell.busy{background:#eef2ff;border-color:#c7d2fe}
   .kcell.bad{background:#fee2e2;border-color:#fecaca}
   .kcell.ok{background:#dcfce7;border-color:#bbf7d0}
+  /* Atama yapılmış hücreler: genel stil */
+  .kcell.assigned {
+    color: var(--ink);
+    font-weight: 700;
+    border-style: solid;
+    border-width: 1px;
+  }
+  .kcell.assigned .mini2 {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  /* Ders bazında atanmış hücre renkleri */
+  .kcell.assigned.b-mat{
+    background: color-mix(in srgb, var(--b-mat) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-mat) var(--t-150), #fff);
+  }
+  .kcell.assigned.b-fen{
+    background: color-mix(in srgb, var(--b-fen) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-fen) var(--t-150), #fff);
+  }
+  .kcell.assigned.b-trk{
+    background: color-mix(in srgb, var(--b-trk) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-trk) var(--t-150), #fff);
+  }
+  .kcell.assigned.b-sos{
+    background: color-mix(in srgb, var(--b-sos) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-sos) var(--t-150), #fff);
+  }
+  .kcell.assigned.b-ing{
+    background: color-mix(in srgb, var(--b-ing) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-ing) var(--t-150), #fff);
+  }
+  .kcell.assigned.b-din{
+    background: color-mix(in srgb, var(--b-din) var(--t-50), #fff);
+    border-color: color-mix(in srgb, var(--b-din) var(--t-150), #fff);
+  }
+
+  /* Yazdırma modunda renkli hücreler */
+  @media print{
+    .print-table td.b-mat { background:#e6e8ff; }
+    .print-table td.b-fen { background:#d6f7e9; }
+    .print-table td.b-trk { background:#ffe8d6; }
+    .print-table td.b-sos { background:#d8f6fb; }
+    .print-table td.b-ing { background:#e3f9e9; }
+    .print-table td.b-din { background:#ece7ff; }
+    .print-table td[class^="b-"], .print-table td[class*=" b-"]{
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+  }
   .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .legend span{padding:6px 10px;border-radius:20px;background:#f1f5f9}
   .chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -646,6 +708,19 @@ const openFile = (inputEl, cb) => { inputEl.onchange = e=>{
 }; inputEl.click(); };
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
 
+/* === Ders -> sınıf kısaltması (güvenli) === */
+const BRANCH_CLASS = {
+  'MATEMATİK':'mat',
+  'FEN BİLİMLERİ':'fen',
+  'TÜRKÇE':'trk',
+  'SOSYAL BİLGİLER':'sos',
+  'İNGİLİZCE':'ing',
+  'DİN KÜLTÜRÜ':'din'
+};
+function bcls(b){
+  return 'b-' + (BRANCH_CLASS[b] || toId(b));
+}
+
 /* Grup sıralama:  G1-7A, G2-7A, G3-7A, ... G1-7B ... */
 function parseGroupName(name){
   const s=String(name||'').trim().toUpperCase();
@@ -1145,13 +1220,21 @@ function renderAssignCards(){
       const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
       row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
       for(let s=0; s<S; s++){
-        const cell = document.createElement('div'); cell.className='kcell'; cell.dataset.d=d; cell.dataset.s=s;
-        const cur = state.assignments.find(a=>a.group===g.id && a.day===d && a.slot===s);
-        if(cur){
-          cell.classList.add('busy');
-          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div></div>`;
+        const cell = document.createElement('div');
+        cell.className = 'kcell';
+        cell.dataset.d = d;
+        cell.dataset.s = s;
+        const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
+        if (cur) {
+          // Atanmış hücre: ders rengine göre sınıf ata
+          cell.classList.add('assigned', bcls(cur.branch));
+          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t => t.id === cur.teacherId)?.name || ''}</div></div>`;
+        } else {
+          // Atama yok: grubun müsaitliğine göre yeşil/kırmızı arka plan ver
+          const availOk = state.availability.groups[g.id]?.[d]?.[s] === true;
+          cell.classList.add(availOk ? 'ok' : 'bad');
         }
-        cell.onclick = ()=>{ openAssignDialog(g.id, d, s); };
+        cell.onclick = () => { openAssignDialog(g.id, d, s); };
         row.appendChild(cell);
       }
       grid.appendChild(row);
@@ -1231,16 +1314,33 @@ function fillTeachersForBranch(){
   const selT = $("#dlgTeacher"); selT.innerHTML = '';
 
   findTeacherOptions(branch).forEach(t => {
+    // Uygunluk durumları
     const availOk = state.availability.teachers[t.id]?.[day]?.[slot] === true;
-    const busyNow = isTeacherBusy(t.id, day, slot); // why: yalnız aynı gün/saat çakışması önemli
-
+    const busyNow = isTeacherBusy(t.id, day, slot); // yalnız aynı gün/saat çakışması önemli
     const ok = availOk && !busyNow;
+
+    // Toplam müsait slot ve mevcut atama sayıları
+    let freeCount = 0;
+    let assignedCount = 0;
+    const D = state.program.days.length;
+    const S = state.program.slots;
+    const mat = state.availability.teachers[t.id] || [];
+    for (let d = 0; d < D; d++){
+      const row = mat[d] || [];
+      for (let s = 0; s < S; s++){
+        if (row[s] === true) {
+          const hasAssign = state.assignments.some(a => a.teacherId === t.id && a.day === d && a.slot === s);
+          if (!hasAssign) freeCount++;
+        }
+      }
+    }
+    assignedCount = state.assignments.filter(a => a.teacherId === t.id).length;
 
     const opt = document.createElement('option');
     opt.value = t.id;
-
     if (ok) {
-      opt.textContent = t.name;
+      // Örnek format: "T.A:12 / A.A.D:6" (Toplam Atanabilir / Aktif Ataması)
+      opt.textContent = `${t.name} (T.A:${freeCount} / A.A.D:${assignedCount})`;
     } else {
       const reason = busyNow ? 'uygun değil • çakışıyor' : 'uygun değil';
       opt.textContent = `${t.name} (${reason})`;
@@ -1950,9 +2050,10 @@ function renderPrintPreview(){
       days.forEach((d,di)=>{
         let row=`<tr><td><b>${days[di]}</b></td>`;
         for(let s=0; s<S; s++){
-          const a = aForG.find(x=>x.day===di && x.slot===s);
-          const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : '';
-          row += `<td>${txt}</td>`;
+          const a = aForG.find(x => x.day === di && x.slot === s);
+          const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t => t.id === a.teacherId)?.name || ''}</div>` : '';
+          // Atama varsa, hücreye branş sınıfını ekle; yoksa boş td bırak
+          row += a ? `<td class="${bcls(a.branch)}">${txt}</td>` : `<td></td>`;
         }
         row+='</tr>'; body+=row;
       });
@@ -1982,8 +2083,9 @@ function renderPrintPreview(){
       daysWith.forEach(d=>{
         let row=`<tr><td><b>${days[d]}</b></td>`;
         for(let s=0; s<S; s++){
-          const a = aForT.find(x=>x.day===d && x.slot===s);
-          row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
+          const a = aForT.find(x => x.day === d && x.slot === s);
+          // Atama varsa, branş sınıfıyla td oluştur; yoksa boş td
+          row += a ? `<td class="${bcls(a.branch)}" style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name || ''}</td>` : `<td></td>`;
         }
         row+='</tr>'; body+=row;
       });
@@ -2109,7 +2211,17 @@ bindTopTabs();
 buildProgramGrid(true);
 renderSlotLabels();
 showTopTab('step1');
+  // Sayfa açılır açılmaz verileri oku (bir seferlik). Varsayılan sheetId alanındaki verilerle Google Sheet verilerini çeker.
+  if (!window._autoFetchDone) {
+    window._autoFetchDone = true;
+    try {
+      fetchAll();
+    } catch (err) {
+      console.warn('Otomatik veri okuma hatası:', err);
+    }
+  }
 </script>
+<!--
 <style>
 :root{ /* ders paleti */ --b-mat:#6366f1; /* Matematik */ --b-fen:#10b981; /* Fen Bilimleri */ --b-trk:#f97316; /* Türkçe */ --b-sos:#06b6d4; /* Sosyal Bilgiler */ --b-ing:#22c55e; /* İngilizce */ --b-din:#a78bfa; /* Din Kültürü */ /* tonlar */ --t-50: 14%; --t-150: 26%; --ring:#94a3b8; } /* üst sekmeler – daha modern görünüm */ .tabs{gap:8px;border:0;margin-bottom:10px;position:relative} .tabs:after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:1px;background:#e5e7eb} .tab{padding:12px 16px;border-radius:12px;background:#f1f5f9;font-weight:800;color:#0f172a;box-shadow:0 1px 0 #e5e7eb inset} .tab[aria-selected="true"]{background:#fff;border:1px solid #e5e7eb;box-shadow:0 6px 18px rgba(2,8,23,.06);} /* kartlar */ .card{border-radius:16px;border:1px solid #e5e7eb;background:#fff;box-shadow:0 10px 25px rgba(15,23,42,.06)} .card header{font-weight:800;margin-bottom:8px} /* grid hücreleri – daha “takvim” hissi */ .kgrid[data-cols]{grid-template-columns:160px repeat(var(--cols), minmax(72px,1fr));} .kcell{position:relative;border:1px solid #e5e7eb;background:#fff;min-height:58px;border-radius:12px} .kcell:hover{outline:3px solid rgba(99,102,241,.08);outline-offset:0} .kcell .mini2{opacity:.9} /* atama yapılmış hücre */ .kcell.assigned{color:#0f172a;font-weight:700} .kcell.assigned .mini2{color:#111827;font-weight:600} /* ders renkleri (UI) */ .kcell.assigned.b-mat{ background:color-mix(in srgb, var(--b-mat) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-mat) var(--t-150), #fff); } .kcell.assigned.b-fen{ background:color-mix(in srgb, var(--b-fen) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-fen) var(--t-150), #fff); } .kcell.assigned.b-trk{ background:color-mix(in srgb, var(--b-trk) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-trk) var(--t-150), #fff); } .kcell.assigned.b-sos{ background:color-mix(in srgb, var(--b-sos) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-sos) var(--t-150), #fff); } .kcell.assigned.b-ing{ background:color-mix(in srgb, var(--b-ing) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-ing) var(--t-150), #fff); } .kcell.assigned.b-din{ background:color-mix(in srgb, var(--b-din) var(--t-50), #fff); border-color:color-mix(in srgb, var(--b-din) var(--t-150), #fff); } /* mini yoğunluk modu – istersen .app'a .dense ekle */ .app.dense .kcell{min-height:44px;padding:4px 6px;border-radius:10px} /* Yazdır: ders renklerinin hafif tonu ve okunabilirlik */ @media print{ .print-table td.b-mat { background:#e6e8ff; } .print-table td.b-fen { background:#d6f7e9; } .print-table td.b-trk { background:#ffe8d6; } .print-table td.b-sos { background:#d8f6fb; } .print-table td.b-ing { background:#e3f9e9; } .print-table td.b-din { background:#ece7ff; } .print-table td[class^="b-"], .print-table td[class*=" b-"]{ -webkit-print-color-adjust:exact; print-color-adjust:exact; } .print-header{margin-bottom:10px} .print-sub{margin:8px 0 10px} } ``` > Not: mevcut print bloğun temelini koruyoruz, sadece tablo hücrelerine ders rengine göre arka plan veriyoruz. --- # 2) JS – Ders rengi sınıfı ekle & Yazdır hücrelerine sınıf bas Aşağıdaki yardımcıları `<script>` içinde bir yere (ör. global yardımcıların altı) ekle: ```js /* === Ders -> sınıf kısaltması (güvenli) === */ const BRANCH_CLASS = { 'MATEMATİK':'mat','FEN BİLİMLERİ':'fen','TÜRKÇE':'trk', 'SOSYAL BİLGİLER':'sos','İNGİLİZCE':'ing','DİN KÜLTÜRÜ':'din' }; const bcls = b => 'b-' + (BRANCH_CLASS[b] || toId(b)); ``` ## 2.a Atama panelinde renkli hücre `renderAssignCards()` içinde, atanmış hücre oluşturduğun bölümde şu değişikliği yap: **ÖNCE:** ```js if(cur){ cell.classList.add('busy'); cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div></div>`; } ``` **SONRA:** ```js if(cur){ cell.classList.add('assigned', bcls(cur.branch)); cell.innerHTML = `<div style="text-align:center"> <div><b>${cur.branch}</b></div> <div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div> </div>`; } ``` > Bu düzenleme, eski “busy” görselini ders rengine göre modern panele çevirir. ## 2.b Yazdır tablosunda renk sınıfı ver `renderPrintPreview()` içinde hücre HTML’lerini üretirken, `<td>`’lere ders sınıfını ekleyelim. **Grup görünümü** satır oluşturma kısmında (td içeriği üretilirken) bu satırı değiştir: ```js const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : ''; row += `<td>${txt}</td>`; ``` **şu hale getir:** ```js const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : ''; row += a ? `<td class="${bcls(a.branch)}">${txt}</td>` : `<td></td>`; ``` **Öğretmen görünümü** için de benzer şekilde: ```js row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`; ``` **yerine:** ```js row += a ? `<td class="${bcls(a.branch)}" style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`; ``` >
 
@@ -2401,6 +2513,7 @@ function printAll_7_8() {
   setTimeout(() => { try { w.print(); } catch(_){} }, 50);
 }
 </script>
+-->
 <!-- ==== TEACHER PRINT V2 – KOMPAKT, TEK A4 ==== -->
 <style>
 /* ===========================
