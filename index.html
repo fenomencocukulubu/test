@@ -2624,7 +2624,7 @@ function printAll_7_8() {
   display:grid; grid-template-columns: 1fr 1fr; gap: var(--tpv2-gap);
 }
 .print-teacher-v2 .att-card{
-  border:1px solid var(--tpv2-grid); border-radius:8px;
+  border:1.2px solid var(--tpv2-grid); border-radius:8px;
   padding: calc(var(--tpv2-pad) - 1px);
   break-inside: avoid; page-break-inside: avoid;
   background: #fff;
@@ -2636,7 +2636,7 @@ function printAll_7_8() {
   width:100%; border-collapse:collapse;
 }
 .print-teacher-v2 .att th, .print-teacher-v2 .att td{
-  border:1px solid #e5e7eb; padding: calc(var(--tpv2-pad) - 2px);
+  border:1.2px solid #0f172a; padding: calc(var(--tpv2-pad) - 2px);
 }
 .print-teacher-v2 .att th{ background:#f9fafb; text-align:center; }
 .print-teacher-v2 .att th:first-child, .print-teacher-v2 .att td:first-child{ text-align:left; }
@@ -2843,7 +2843,25 @@ function printTeachersV2(){
   asgByTeacher.forEach((asgList, tId)=>{
     const t = getTeacher(tId);
     const byDay = groupBy(asgList, a=>a.day);
-    const groups = uniq(asgList.map(a=>a.group)).map(getGroup);
+
+    // Grupları, öğretmenin haftalık ders sırasına göre sırala (Pazartesi 1. dersten Cuma 4. derse kadar)
+    const groupFirstSlot = new Map();
+    asgList.forEach(a => {
+      const score = a.day * 100 + a.slot;
+      const prev = groupFirstSlot.get(a.group);
+      if (prev == null || score < prev) groupFirstSlot.set(a.group, score);
+    });
+
+    const groups = uniq(asgList.map(a=>a.group))
+      .sort((g1, g2) => {
+        const k1 = groupFirstSlot.get(g1) ?? 999999;
+        const k2 = groupFirstSlot.get(g2) ?? 999999;
+        if (k1 !== k2) return k1 - k2;
+        const n1 = (state.groups?.[g1]?.name || g1);
+        const n2 = (state.groups?.[g2]?.name || g2);
+        return String(n1).localeCompare(String(n2), 'tr');
+      })
+      .map(getGroup);
 
     const windows = windowsPerTeacher;
     for(let wIx=0; wIx<windows; wIx++){
@@ -2871,7 +2889,6 @@ function printTeachersV2(){
       const foot = `
         <div class="foot">
           <span class="muted">Öğretmen: ${esc(t.name)}${t.branch?` • ${esc(t.branch)}`:''}</span>
-          <span class="muted">${new Date().toLocaleDateString('tr-TR')}</span>
         </div>
       `;
 
