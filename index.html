@@ -366,16 +366,15 @@
     .print-page{page-break-after:always;break-after:page}
     /* Increased font-size for print clarity */
     .print-table{width:100%;border-collapse:collapse;font-size:11px}
-    /* Daha belirgin çizgiler için kenarlık kalınlığı artırıldı */
-    .print-table th,.print-table td{border:1.3px solid #000;padding:5px 6px;vertical-align:top}
+    .print-table th,.print-table td{border:1px solid #000;padding:5px 6px;vertical-align:top}
     .print-table thead th{background:#f3f4f6}
     .tight th,.tight td{padding:4px 5px;font-size:10.5px}
     .avoid-break{page-break-inside:avoid;break-inside:avoid}
     .students-2col{columns:2;column-gap:12px}
     .students-2col ul{margin:0;padding-left:0;list-style:none}
-    .students-2col li{break-inside:avoid;padding:2px 0;border-bottom:1.3px solid #94a3b8}
+    .students-2col li{break-inside:avoid;padding:2px 0;border-bottom:1px dotted #94a3b8}
     .att-table{width:100%;border-collapse:collapse;font-size:10px;margin-top:6px}
-    .att-table th,.att-table td{border:1.3px solid #000;padding:3px 4px;text-align:center}
+    .att-table th,.att-table td{border:1px solid #000;padding:3px 4px;text-align:center}
     .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
 
@@ -691,25 +690,6 @@ function getBorderColorForBranch(branch) {
   const hue = (sum * 37) % 360;
   return `hsl(${hue}, 65%, 75%)`;
 }
-
-/* === Ders -> CSS class mapping for consistent colors === */
-const BRANCH_CLASS = {
-  'MATEMATİK': 'mat',
-  'FEN BİLİMLERİ': 'fen',
-  'TÜRKÇE': 'trk',
-  'SOSYAL BİLGİLER': 'sos',
-  'İNGİLİZCE': 'ing',
-  'DİN KÜLTÜRÜ': 'din'
-};
-/**
- * Get a safe CSS class name for a given branch. If the branch is not one of
- * the predefined names above we fall back to a slugified ID based on the
- * branch text. The returned string always starts with "b-" so it can be
- * consumed by CSS selectors.
- * @param {string} b Branch name
- * @returns {string} CSS class for that branch, e.g. "b-mat"
- */
-const bcls = b => 'b-' + (BRANCH_CLASS[b] || toId(b));
 
 /* Grup sıralama:  G1-7A, G2-7A, G3-7A, ... G1-7B ... */
 function parseGroupName(name){
@@ -1222,15 +1202,13 @@ function renderAssignCards(){
         // Mevcut bir atama var mı? Varsa içeriği ve özel renkleri uygula
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
         if (cur) {
-          // Öğretmen atanmış ise hücre "assigned" durumuna ve dersin CSS sınıfına sahip olsun.
-          // Bu sayede renkler ve yazı tipleri CSS ile kontrol edilir.
-          cell.classList.add('assigned', bcls(cur.branch));
-          cell.innerHTML = `
-            <div style="text-align:center">
-              <div><b>${cur.branch}</b></div>
-              <div class="mini2">👤 ${state.teachers.find(t => t.id === cur.teacherId)?.name || ''}</div>
-            </div>
-          `;
+          cell.classList.add('busy');
+          // Branş renklerini uygula (arka plan ve sınır)
+          const bg = getColorForBranch(cur.branch);
+          const bd = getBorderColorForBranch(cur.branch);
+          if (bg) cell.style.backgroundColor = bg;
+          if (bd) cell.style.borderColor = bd;
+          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t => t.id === cur.teacherId)?.name || ''}</div></div>`;
         }
         cell.onclick = () => {
           openAssignDialog(g.id, d, s);
@@ -2112,8 +2090,7 @@ function renderPrintPreview(){
         for(let s=0; s<S; s++){
           const a = aForG.find(x=>x.day===di && x.slot===s);
           const txt = a ? `<div style="text-align:center"><b>${a.branch}</b><br/>👤 ${state.teachers.find(t=>t.id===a.teacherId)?.name||''}</div>` : '';
-          // Ders varsa hücreye ders sınıfı ekle. Böylece renkli baskı uygulanabilir.
-          row += a ? `<td class="${bcls(a.branch)}">${txt}</td>` : `<td></td>`;
+          row += `<td>${txt}</td>`;
         }
         row+='</tr>'; body+=row;
       });
@@ -2144,43 +2121,14 @@ function renderPrintPreview(){
         let row=`<tr><td><b>${days[d]}</b></td>`;
         for(let s=0; s<S; s++){
           const a = aForT.find(x=>x.day===d && x.slot===s);
-          // Öğretmene göre görünümde de ders sınıfı ekle
-          row += a
-            ? `<td class="${bcls(a.branch)}" style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>`
-            : `<td></td>`;
+          row += a ? `<td style="text-align:center"><b>${a.branch}</b><br/>Grup: ${state.groups[a.group]?.name||''}</td>` : `<td></td>`;
         }
         row+='</tr>'; body+=row;
       });
       tTbl.innerHTML = `<thead>${thead}</thead><tbody>${body}</tbody>`; wr.appendChild(tTbl);
 
       // Yoklama blokları — her grup için küçük tablo
-      // Grupları öğretmenin ders sırasına göre sırala. Önce her grubun bu öğretmen için en erken dersi bulunur,
-      // ardından gün ve saat numarasına göre sıralama yapılır. Eğer her iki grubun da
-      // en erken zamanı bulunamazsa veya eşitse, groupComparator yedeklenir.
-      const groupsForT = Array.from(new Set(aForT.map(a=>a.group)))
-        .map(gid => state.groups[gid])
-        .filter(Boolean);
-      // En erken ders zamanlarını hesapla
-      const earliest = {};
-      aForT.forEach(a => {
-        const gId = a.group;
-        const cur = earliest[gId];
-        if (!cur || a.day < cur.day || (a.day === cur.day && a.slot < cur.slot)) {
-          earliest[gId] = { day: a.day, slot: a.slot };
-        }
-      });
-      groupsForT.sort((g1, g2) => {
-        const e1 = earliest[g1.id];
-        const e2 = earliest[g2.id];
-        if (e1 && e2) {
-          const dayDiff = e1.day - e2.day;
-          if (dayDiff !== 0) return dayDiff;
-          const slotDiff = e1.slot - e2.slot;
-          if (slotDiff !== 0) return slotDiff;
-        }
-        // Fallback to default group ordering
-        return groupComparator(g1, g2);
-      });
+      const groupsForT = Array.from(new Set(aForT.map(a=>a.group))).map(gid=>state.groups[gid]).filter(Boolean).sort(groupComparator);
       groupsForT.forEach(g=>{
         const blockTitle = document.createElement('div'); blockTitle.className='print-sub';
         blockTitle.innerHTML = `<b>${g.name}</b> • Öğrenci Yoklama`;
@@ -2648,8 +2596,7 @@ function printAll_7_8() {
   width:100%; border-collapse:collapse; table-layout:fixed;
 }
 .print-teacher-v2 th, .print-teacher-v2 td{
-  /* Daha belirgin çizgiler için kenarlık kalınlığı artırıldı */
-  border: 1.3px solid var(--tpv2-grid);
+  border: 1px solid var(--tpv2-grid);
   padding: var(--tpv2-pad); vertical-align:top;
 }
 .print-teacher-v2 thead th{
@@ -2689,8 +2636,7 @@ function printAll_7_8() {
   width:100%; border-collapse:collapse;
 }
 .print-teacher-v2 .att th, .print-teacher-v2 .att td{
-  /* Yoklama tablosu çizgi kalınlığı artırıldı */
-  border:1.3px solid #e5e7eb; padding: calc(var(--tpv2-pad) - 2px);
+  border:1px solid #e5e7eb; padding: calc(var(--tpv2-pad) - 2px);
 }
 .print-teacher-v2 .att th{ background:#f9fafb; text-align:center; }
 .print-teacher-v2 .att th:first-child, .print-teacher-v2 .att td:first-child{ text-align:left; }
@@ -2922,10 +2868,10 @@ function printTeachersV2(){
       const showAttendanceHere = (windows === 1) || (windows > 1 && wIx === windows-1);
       const att = showAttendanceHere ? renderAttendance(groups, ATT_HEADERS) : '';
 
-      // Not: Tarih çıkarıldı – çıktıda tarih gösterilmesin
       const foot = `
         <div class="foot">
           <span class="muted">Öğretmen: ${esc(t.name)}${t.branch?` • ${esc(t.branch)}`:''}</span>
+          <span class="muted">${new Date().toLocaleDateString('tr-TR')}</span>
         </div>
       `;
 
