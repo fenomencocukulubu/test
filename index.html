@@ -376,6 +376,20 @@
     .att-table th,.att-table td{border:1px solid #0f172a;padding:3px 4px;text-align:center}
     .att-table th:first-child,.att-table td:first-child{text-align:left}
   }
+
+/*
+  Manuel atama modalinin boyutu ve içindeki seçim kutuları büyütüldü. Öğretmen
+  kapasiteleri ve mevcut ders sayıları gösterildiğinden metinler uzayabilir.
+  Bu nedenle dialog geniş bir alana yayılır ve öğretmen seçenekleri için
+  minimum genişlik tanımlanır.
+*/
+#dlgAssign {
+  max-width: 600px;
+  width: 100%;
+}
+#dlgAssign select {
+  min-width: 280px;
+}
 </style>
 </head>
 <body>
@@ -645,6 +659,36 @@ const openFile = (inputEl, cb) => { inputEl.onchange = e=>{
   }catch(err){ alert('Dosya okunamadı: '+err.message); }
 }; inputEl.click(); };
 const clamp = (n,min,max)=>Math.max(min,Math.min(max,n));
+
+// ========== Branch Color Helpers ==========
+// In order to visually distinguish different course assignments in the schedule,
+// we generate pastel colors based off of the branch name. These colors are
+// deterministic (same branch → same color) and cached for performance. The
+// lightness and saturation values are tuned for good contrast while keeping
+// the colors soft. A slightly darker border color is also produced to
+// delineate the cells.
+const branchColorCache = {};
+function getColorForBranch(branch) {
+  if (!branch) return null;
+  if (branchColorCache[branch]) return branchColorCache[branch];
+  let sum = 0;
+  for (let i = 0; i < branch.length; i++) {
+    sum = (sum + branch.charCodeAt(i)) & 0xffff;
+  }
+  const hue = (sum * 37) % 360;
+  const color = `hsl(${hue}, 70%, 85%)`;
+  branchColorCache[branch] = color;
+  return color;
+}
+function getBorderColorForBranch(branch) {
+  if (!branch) return null;
+  let sum = 0;
+  for (let i = 0; i < branch.length; i++) {
+    sum = (sum + branch.charCodeAt(i)) & 0xffff;
+  }
+  const hue = (sum * 37) % 360;
+  return `hsl(${hue}, 65%, 75%)`;
+}
 
 /* Grup sıralama:  G1-7A, G2-7A, G3-7A, ... G1-7B ... */
 function parseGroupName(name){
@@ -1145,13 +1189,29 @@ function renderAssignCards(){
       const row = document.createElement('div'); row.className='kgrid'; row.style.setProperty('--cols', S);
       row.appendChild(Object.assign(document.createElement('div'),{textContent:days[d],style:'font-weight:700'}));
       for(let s=0; s<S; s++){
-        const cell = document.createElement('div'); cell.className='kcell'; cell.dataset.d=d; cell.dataset.s=s;
-        const cur = state.assignments.find(a=>a.group===g.id && a.day===d && a.slot===s);
-        if(cur){
+        const cell = document.createElement('div');
+        cell.className = 'kcell';
+        cell.dataset.d = d;
+        cell.dataset.s = s;
+
+        // Duruma göre uygunluk rengini uygula (müsaitse yeşil, değilse kırmızı)
+        const avail = state.availability?.groups?.[g.id]?.[d]?.[s] === true;
+        cell.classList.add(avail ? 'ok' : 'bad');
+
+        // Mevcut bir atama var mı? Varsa içeriği ve özel renkleri uygula
+        const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
+        if (cur) {
           cell.classList.add('busy');
-          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t=>t.id===cur.teacherId)?.name||''}</div></div>`;
+          // Branş renklerini uygula (arka plan ve sınır)
+          const bg = getColorForBranch(cur.branch);
+          const bd = getBorderColorForBranch(cur.branch);
+          if (bg) cell.style.backgroundColor = bg;
+          if (bd) cell.style.borderColor = bd;
+          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t => t.id === cur.teacherId)?.name || ''}</div></div>`;
         }
-        cell.onclick = ()=>{ openAssignDialog(g.id, d, s); };
+        cell.onclick = () => {
+          openAssignDialog(g.id, d, s);
+        };
         row.appendChild(cell);
       }
       grid.appendChild(row);
@@ -1225,25 +1285,56 @@ function getTeacherAssignmentsMap(){
   return m;
 }
 
+/**
+ * Compute the total number of lesson slots a teacher could be assigned given
+ * current group requests. This capacity is the sum of all requested lesson
+ * counts for the teacher's branch across all groups. It serves as an upper
+ * bound on how many lessons the teacher might teach in the plan. If no
+ * requests exist for that branch the capacity will be zero.
+ * @param {string} tid - teacher ID
+ * @returns {number} total slots requested for this teacher's branch
+ */
+function teacherCapacity(tid) {
+  const tObj = state.teachers.find(x => x.id === tid);
+  if (!tObj) return 0;
+  const br = tObj.branch;
+  let total = 0;
+  for (const gid of Object.keys(state.requests)) {
+    const req = state.requests[gid] || {};
+    const n = req[br];
+    if (typeof n === 'number' && !isNaN(n)) total += n;
+  }
+  return total;
+}
+
 function fillTeachersForBranch(){
   const branch = $("#dlgBranch").value;
   const {day, slot} = dlgCtx || {};
   const selT = $("#dlgTeacher"); selT.innerHTML = '';
 
+  // Precompute current assignment counts for teachers once per invocation
+  const assignMap = getTeacherAssignmentsMap();
   findTeacherOptions(branch).forEach(t => {
     const availOk = state.availability.teachers[t.id]?.[day]?.[slot] === true;
-    const busyNow = isTeacherBusy(t.id, day, slot); // why: yalnız aynı gün/saat çakışması önemli
+    const busyNow = isTeacherBusy(t.id, day, slot);
 
     const ok = availOk && !busyNow;
 
     const opt = document.createElement('option');
     opt.value = t.id;
 
+    // Determine capacity and current assignment count
+    const totalAssigned = (assignMap.get(t.id) || []).length;
+    const cap = teacherCapacity(t.id);
+    const countLabel = `(${totalAssigned}/${cap})`;
+
     if (ok) {
-      opt.textContent = t.name;
+      // Teacher is available; display counts next to name
+      opt.textContent = `${t.name} ${countLabel}`;
     } else {
-      const reason = busyNow ? 'uygun değil • çakışıyor' : 'uygun değil';
-      opt.textContent = `${t.name} (${reason})`;
+      // Teacher not suitable now; still show counts and reason
+      const reason = busyNow ? 'çakışıyor' : 'uygun değil';
+      opt.textContent = `${t.name} ${countLabel} • ${reason}`;
       opt.disabled = true;
     }
     selT.appendChild(opt);
@@ -1518,18 +1609,34 @@ function autoAssign() {
         let placedHere = false;
 
         for (const branch of uniqBranches) {
-          const candidates = findTeacherOptions(branch)
-            .filter(t => state.availability.teachers[t.id]?.[d]?.[s] === true && !(tGrid[t.id]||[])[d]?.[s]);
-          if (candidates.length === 0) continue;
+          // Tüm aday öğretmenleri filtrele (uygunluk ve boşluk kontrolü)
+          const allCandidates = findTeacherOptions(branch)
+            .filter(t => state.availability.teachers[t.id]?.[d]?.[s] === true && !(tGrid[t.id] || [])[d]?.[s]);
+          if (allCandidates.length === 0) continue;
 
-          shuffle(candidates);
+          // Daha önce bu gruba aynı branş için atanmış öğretmenleri belirle
+          const usedTeachers = new Set();
+          const gRows = gGrid[gid] || [];
+          for (let dd = 0; dd < D; dd++) {
+            const row = gRows[dd] || [];
+            for (let ss = 0; ss < S; ss++) {
+              const a2 = row[ss];
+              if (a2 && a2.branch === branch) usedTeachers.add(a2.teacherId);
+            }
+          }
 
-          for (const t of candidates) {
+          // Öncelikli olarak henüz kullanılmamış öğretmenleri listele
+          const preferred = allCandidates.filter(t => !usedTeachers.has(t.id));
+          const candidateList = preferred.length > 0 ? preferred : allCandidates;
+
+          shuffle(candidateList);
+
+          for (const t of candidateList) {
             if (!canUse(gGrid, tGrid, gid, t.id, d, s)) continue;
 
             const a = { group: gid, day: d, slot: s, branch, teacherId: t.id };
-            (gGrid[gid] ||= makeGrid(D,S))[d][s] = a;
-            (tGrid[t.id] ||= makeGrid(D,S))[d][s] = a;
+            (gGrid[gid] ||= makeGrid(D, S))[d][s] = a;
+            (tGrid[t.id] ||= makeGrid(D, S))[d][s] = a;
 
             const idx = needArr.indexOf(branch);
             if (idx > -1) needArr.splice(idx, 1);
