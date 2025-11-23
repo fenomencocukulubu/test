@@ -396,54 +396,71 @@
 #dlgAssign select {
   min-width: 280px;
 }
-  /* === DERS RENK PALETİ === */
-/* Varsayılan atama rengi (Tanımsız dersler için) */
-.kcell.assigned {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
-    color: #0f172a;
+/* === 1. KUTU BOYUTUNU ORİJİNAL HALİNE ZORLA === */
+.kcell {
+    /* Orijinal yükseklik ayarı */
+    min-height: 60px !important;
+    height: 60px !important; 
+    
+    /* İç boşluğu azaltarak şişmeyi önle */
+    padding: 2px 4px !important;
+    
+    /* İçeriği tam ortala */
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    
+    /* Varsayılan gri/beyaz */
+    background: #fff; 
 }
 
-/* MATEMATİK: Mavi Tonları */
+/* === 2. RENKLER (ARKA PLAN DAHİL) === */
+/* MATEMATİK: Mavi Arka Plan */
 .kcell.assigned.mat {
-    background-color: #eff6ff; /* Çok açık mavi */
-    border-color: #93c5fd;     /* Mavi kenarlık */
-    color: #1e3a8a;            /* Koyu mavi yazı */
+    background-color: #dbeafe !important; /* Belirgin Açık Mavi */
+    border: 1px solid #60a5fa !important;
+    color: #1e3a8a !important;
 }
 
-/* FEN BİLİMLERİ: Yeşil Tonları */
+/* FEN BİLİMLERİ: Yeşil Arka Plan */
 .kcell.assigned.fen {
-    background-color: #f0fdf4;
-    border-color: #86efac;
-    color: #14532d;
+    background-color: #dcfce7 !important; /* Belirgin Açık Yeşil */
+    border: 1px solid #4ade80 !important;
+    color: #14532d !important;
 }
 
-/* TÜRKÇE: Turuncu Tonları */
+/* TÜRKÇE: Turuncu Arka Plan */
 .kcell.assigned.trk {
-    background-color: #fff7ed;
-    border-color: #fdba74;
-    color: #7c2d12;
+    background-color: #ffedd5 !important; /* Belirgin Açık Turuncu */
+    border: 1px solid #fb923c !important;
+    color: #7c2d12 !important;
 }
 
-/* SOSYAL BİLGİLER: Cam Göbeği/Turkuaz */
+/* SOSYAL BİLGİLER: Cam Göbeği Arka Plan */
 .kcell.assigned.sos {
-    background-color: #ecfeff;
-    border-color: #67e8f9;
-    color: #155e75;
+    background-color: #cffafe !important;
+    border: 1px solid #22d3ee !important;
+    color: #155e75 !important;
 }
 
-/* İNGİLİZCE: Sarı/Limon */
+/* İNGİLİZCE: Sarı Arka Plan */
 .kcell.assigned.ing {
-    background-color: #fefce8;
-    border-color: #fde047;
-    color: #854d0e;
+    background-color: #fef9c3 !important;
+    border: 1px solid #facc15 !important;
+    color: #713f12 !important;
 }
 
-/* DİN KÜLTÜRÜ: Mor/Lila */
+/* DİN KÜLTÜRÜ: Mor Arka Plan */
 .kcell.assigned.din {
-    background-color: #faf5ff;
-    border-color: #d8b4fe;
-    color: #581c87;
+    background-color: #f3e8ff !important;
+    border: 1px solid #c084fc !important;
+    color: #581c87 !important;
+}
+
+/* Atama yapılmış ama branşı belirsiz olanlar */
+.kcell.assigned {
+    font-weight: 700;
 }
 </style>
 </head>
@@ -1270,27 +1287,24 @@ function getBranchClass(branchName) {
 
         // Mevcut bir atama var mı? Varsa hücreyi ders rengine dönüştür.
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
-        if (cur) {
-    // 1. Eski durum sınıflarını temizle
+       if (cur) {
+    // Sınıfları temizle ve yenilerini ekle
     cell.classList.remove('ok', 'bad', 'busy');
-    
-    // 2. 'assigned' sınıfını ve branşa özel renk sınıfını ekle
-    // Not: getBranchClass fonksiyonunu yukarıda tanımladığımızı varsayıyoruz
     cell.classList.add('assigned', getBranchClass(cur.branch));
-    
-    // 3. İçeriği yaz
+
+    // Öğretmen adını al
     const teacherName = state.teachers.find(t => t.id === cur.teacherId)?.name || '';
-    
-    // İpucu: İçerik çok uzunsa taşmaması için overflow hidden ekleyebilirsiniz,
-    // ama boyut değişmemesi için stil aynı kalmalı.
+
+    // HTML İçeriği - Satır aralıkları (line-height) düşürüldü ve margin'ler sıfırlandı
     cell.innerHTML = `
-      <div style="text-align:center; pointer-events:none;">
-        <div style="font-size:0.95em; line-height:1.2;"><b>${cur.branch}</b></div>
-        <div class="mini2" style="margin-top:2px;">👤 ${teacherName}</div>
+      <div style="text-align:center; width:100%; pointer-events:none; overflow:hidden;">
+        <div style="font-size:13px; line-height:1.1; margin-bottom:2px;">
+            ${cur.branch}
+        </div>
+        <div class="mini2" style="font-size:10px; opacity:0.85; line-height:1;">
+            👤 ${teacherName}
+        </div>
       </div>`;
-      
-    // ÖNEMLİ: Eğer kodunuzda cell.style.backgroundColor = ... yapan bir satır varsa onu SİLİN.
-    // Rengi CSS'ten alması için inline style olmamalıdır.
 }
         cell.onclick = () => {
           openAssignDialog(g.id, d, s);
@@ -2995,5 +3009,6 @@ function printTeachersV2(){
 
 </body>
 </html>
+
 
 
