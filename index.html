@@ -50,6 +50,11 @@
   .kcell.busy{background:#eef2ff;border-color:#c7d2fe}
   .kcell.bad{background:#fee2e2;border-color:#fecaca}
   .kcell.ok{background:#dcfce7;border-color:#bbf7d0}
+  /* Atanmış (dersli) hücreler – arka planı JS'de ders rengine boyanır */
+  .kcell.assigned{
+    color:var(--ink);
+    font-weight:700;
+  }
   .legend{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
   .legend span{padding:6px 10px;border-radius:20px;background:#f1f5f9}
   .chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -1195,20 +1200,27 @@ function renderAssignCards(){
         cell.dataset.d = d;
         cell.dataset.s = s;
 
-        // Duruma göre uygunluk rengini uygula (müsaitse yeşil, değilse kırmızı)
+        // Duruma göre uygunluk rengini uygula (müsaitse yeşil, değilse kırmızı).
+        // Bu renkler yalnızca boş hücreler için kullanılır; ataması olan hücreler
+        // kendi ders renkleriyle gösterilecektir.
         const avail = state.availability?.groups?.[g.id]?.[d]?.[s] === true;
         cell.classList.add(avail ? 'ok' : 'bad');
 
-        // Mevcut bir atama var mı? Varsa içeriği ve özel renkleri uygula
+        // Mevcut bir atama var mı? Varsa hücreyi ders rengine dönüştür.
         const cur = state.assignments.find(a => a.group === g.id && a.day === d && a.slot === s);
         if (cur) {
-          cell.classList.add('busy');
+          // Atanmış hücrelerde hazır uygunluk sınıflarını kaldır, böylece arka plan
+          // tamamen ders rengiyle kaplanır. Ardından yeni 'assigned' sınıfını ekle.
+          cell.classList.remove('ok', 'bad', 'busy');
+          cell.classList.add('assigned');
           // Branş renklerini uygula (arka plan ve sınır)
           const bg = getColorForBranch(cur.branch);
           const bd = getBorderColorForBranch(cur.branch);
           if (bg) cell.style.backgroundColor = bg;
           if (bd) cell.style.borderColor = bd;
-          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${state.teachers.find(t => t.id === cur.teacherId)?.name || ''}</div></div>`;
+          // Hücrenin içeriğini ders adı ve öğretmen bilgisi ile doldur.
+          const teacherName = state.teachers.find(t => t.id === cur.teacherId)?.name || '';
+          cell.innerHTML = `<div style="text-align:center"><div><b>${cur.branch}</b></div><div class="mini2">👤 ${teacherName}</div></div>`;
         }
         cell.onclick = () => {
           openAssignDialog(g.id, d, s);
