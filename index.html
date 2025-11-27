@@ -473,24 +473,36 @@
    * ile kesiliyor.
    */
   .kgrid .kcell {
-    /* içerik uzun olsa bile sütun genişlemesin */
-    min-width: 0 !important;
-    /* taşan içeriği gizle */
-    overflow: hidden !important;
-    box-sizing: border-box !important;
-  }
-  /* iç kapsayıcıların genişliği sınırlandırılsın */
-  .kgrid .kcell > * {
-    width: 100% !important;
-    max-width: 100% !important;
-  }
-  /* slot içindeki başlık ve mini metin tek satırda olsun ve taşma olduğunda
-     üç nokta ile kesilsin */
-  .kgrid .kcell > * > div {
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-  }
+  min-width: 0 !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+}
+
+/* İç kapsayıcı hem yatayda hem dikeyde ortalansın */
+.kgrid .kcell > * {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Metinler çok uzunsa satır atabilsin, üç nokta ile kesilmesin */
+.kgrid .kcell > * > div {
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  line-height: 1.1;
+  font-size: clamp(9px, 0.8vw, 12px);  /* ekrana göre otomatik küçülür/büyür */
+  text-align: center;
+}
+
+/* Atama yapılmış hücrelerde ders adı biraz daha büyük gözüksün */
+.kcell.assigned > div:first-child {
+  font-weight: 800;
+  font-size: clamp(10px, 0.9vw, 13px);
+}
 </style>
 </head>
 <body>
@@ -3068,6 +3080,7 @@ function printTeachersV2(){
 
 </body>
 </html>
+
 
 
 
