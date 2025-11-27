@@ -462,6 +462,35 @@
 .kcell.assigned {
     font-weight: 700;
 }
+
+  /*
+   * Slot boyutlarının tutarlı kalması ve içeriklerin hücre genişliğini zorlayıp
+   * ızgarayı bozmasını önlemek için aşağıdaki ayarlar eklendi. Bazı uzun branş
+   * veya öğretmen isimleri sütunları genişletip diğer slotların boyutunu
+   * farklılaştırıyordu. Min‐width'i sıfıra çekerek hücrelerin içerik
+   * taşmalarına izin veriyoruz ve overflow ile taşan metni gizliyoruz. Böylece
+   * tüm kcell'ler aynı genişlikte kalıyor, metin sığmadığında ise üç nokta
+   * ile kesiliyor.
+   */
+  .kgrid .kcell {
+    /* içerik uzun olsa bile sütun genişlemesin */
+    min-width: 0 !important;
+    /* taşan içeriği gizle */
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+  /* iç kapsayıcıların genişliği sınırlandırılsın */
+  .kgrid .kcell > * {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+  /* slot içindeki başlık ve mini metin tek satırda olsun ve taşma olduğunda
+     üç nokta ile kesilsin */
+  .kgrid .kcell > * > div {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
 </style>
 </head>
 <body>
